@@ -82,6 +82,7 @@
             this.autoFixSkinFaceFromPhotoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkDreadsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.validateToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.checkDevelopmentArchetypeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.checkSpecialTeamsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutCheckOperationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -519,6 +520,7 @@
             this.autoFixSkinFaceFromPhotoToolStripMenuItem,
             this.checkDreadsToolStripMenuItem,
             this.validateToolStripMenuItem,
+            this.checkDevelopmentArchetypeToolStripMenuItem,
             this.checkSpecialTeamsToolStripMenuItem,
             this.aboutCheckOperationsToolStripMenuItem});
             this.checkToolStripMenuItem.Name = "checkToolStripMenuItem";
@@ -559,6 +561,13 @@
             this.validateToolStripMenuItem.Size = new System.Drawing.Size(284, 22);
             this.validateToolStripMenuItem.Text = "Check Players Ht/Wt/Bt(Text Operation)";
             this.validateToolStripMenuItem.Click += new System.EventHandler(this.validateToolStripMenuItem_Click);
+            // 
+            // checkDevelopmentArchetypeToolStripMenuItem
+            // 
+            this.checkDevelopmentArchetypeToolStripMenuItem.Name = "checkDevelopmentArchetypeToolStripMenuItem";
+            this.checkDevelopmentArchetypeToolStripMenuItem.Size = new System.Drawing.Size(284, 22);
+            this.checkDevelopmentArchetypeToolStripMenuItem.Text = "Check Development Archetype";
+            this.checkDevelopmentArchetypeToolStripMenuItem.Click += new System.EventHandler(this.checkDevelopmentArchetypeToolStripMenuItem_Click);
             // 
             // checkSpecialTeamsToolStripMenuItem
             // 
@@ -748,6 +757,7 @@
         private System.Windows.Forms.ToolStripMenuItem aboutCheckOperationsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem checkSpecialTeamsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem validateToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem checkDevelopmentArchetypeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem deleteTrailingCommasToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem playerControlledTeamsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem autoFixSkinFaceFromPhotoToolStripMenuItem;

@@ -1699,7 +1699,8 @@ namespace NFL2K5Tool
                         PlayerOffsets.RunRoute,        PlayerOffsets.BreakTackle,      PlayerOffsets.HoldOntoBall, PlayerOffsets.PowerRunStyle, PlayerOffsets.PassAccuracy,
                         PlayerOffsets.PassArmStrength, PlayerOffsets.PassReadCoverage, PlayerOffsets.Tackle,       PlayerOffsets.KickPower,     PlayerOffsets.KickAccuracy,
                         PlayerOffsets.Stamina,         PlayerOffsets.Durability,       PlayerOffsets.Leadership,   PlayerOffsets.Scramble,      PlayerOffsets.Composure,
-                        PlayerOffsets.Consistency,     PlayerOffsets.Aggressiveness};
+                        PlayerOffsets.Consistency,     PlayerOffsets.Aggressiveness,
+                        PlayerOffsets.DevelopmentArchetype};
 
         private void GetPlayerAttributes(int player, StringBuilder builder)
         {
@@ -1729,6 +1730,16 @@ namespace NFL2K5Tool
                 case PlayerOffsets.Face:
                     Face f = (Face)val;
                     retVal = f.ToString();
+                    break;
+                case PlayerOffsets.DevelopmentArchetype:
+                    {
+                        int nibble = (GameSaveData[loc] >> 4) & 0x0F;
+                        int profile = nibble >> 3;
+                        int subtype = nibble & 0x07;
+                        if (subtype > 5) subtype = 5; // retail never uses subtype 6-7; clamp defensively on read
+                        val = profile * 6 + subtype + 1; // friendly 1-12 (1-6 = profile 0, 7-12 = profile 1)
+                        retVal = val.ToString();
+                    }
                     break;
                 case PlayerOffsets.JerseyNumber:
                     val = GameSaveData[loc+1] << 5 & 0x60;
@@ -1794,6 +1805,20 @@ namespace NFL2K5Tool
                 case PlayerOffsets.Face:
                     Face f = (Face)Enum.Parse(typeof(Face), stringVal);
                     SetByte(loc, (byte)f);
+                    break;
+                case PlayerOffsets.DevelopmentArchetype:
+                    {
+                        val = Int32.Parse(stringVal);
+                        if (val < 1) val = 1;
+                        if (val > 12) val = 12; // friendly range is always 1-12; position-specific narrowing
+                                                // (single-profile positions only really use 1-6) is left to
+                                                // PlayerValidator, which reports rather than blocks.
+                        int profile = (val - 1) / 6;
+                        int subtype = (val - 1) % 6;
+                        int nibble = (profile << 3) | subtype;
+                        v1 = (GameSaveData[loc] & 0x0F) | (nibble << 4); // preserve Contract Remaining low nibble
+                        SetByte(loc, (byte)v1);
+                    }
                     break;
                 case PlayerOffsets.JerseyNumber:
                     val = Int32.Parse(stringVal);

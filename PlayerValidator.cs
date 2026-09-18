@@ -74,6 +74,96 @@ namespace NFL2K5Tool
             return "";
         }
 
+        /// <summary>
+        /// Processes the text looking for DevelopmentArchetype values retail would never generate
+        /// for a player's position. Adds warnings when something seems incorrect. This is a separate
+        /// check from ValidatePlayers (Height/Weight/BodyType) -- neither one changes any values.
+        /// </summary>
+        /// <param name="text">The league/team data</param>
+        public string ValidatePlayersArchetype(string text)
+        {
+            StringBuilder builder = new StringBuilder();
+            text = text.Replace("\r\n", "\n");
+            char[] chars = "\n".ToCharArray();
+            string[] lines = text.Split(chars);
+            string line;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                line = lines[i].Trim();
+                if (line.StartsWith("#") || line.StartsWith("Key="))
+                {
+                }
+                else if (line.IndexOf(",") > -1 && !(  // don't check the following lines
+                          line.StartsWith("Coach")
+                       || line.StartsWith("SET")
+                       || line.StartsWith("ApplyFormula")
+                    ))
+                {
+                    try {                builder.Append(ValidatePlayerArchetype(line));                 } 
+                    catch (Exception) { Console.WriteLine("# issue validating line: " + line); }
+                }
+            }
+            if (builder.Length > 0)
+            {
+                builder.Insert(0, "LookupAndModify\n"+
+                    "Key=Position,fname,lname,DevelopmentArchetype\n"+
+                    "#Team = FreeAgents  (this is a comment but allows player editor to function on this data)\n"
+                    );
+            }
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Will add a warning if this player's DevelopmentArchetype is one retail would never generate
+        /// for their position. Friendly range is always 1-12 (see EnumDefinitions.PlayerOffsets.
+        /// DevelopmentArchetype), but only the ten positions in sDualProfilePositions ever use 7-12
+        /// (profile 1) in retail data; every other position should stay within 1-6 (profile 0).
+        /// This only reports mismatches -- it never changes the player's value.
+        /// </summary>
+        /// <param name="line">The player line</param>
+        public string ValidatePlayerArchetype(string line)
+        {
+            List<string> playerParts = InputParser.ParsePlayerLine(line);
+            PlayerValidationResult res = new PlayerValidationResult(Get(playerParts, "Position"), Get(playerParts, "fname"), Get(playerParts, "lname"));
+            ValidateDevelopmentArchetype(playerParts, res);
+            if (res.Invalid)
+            {
+                res.DevelopmentArchetype = Get(playerParts, "DevelopmentArchetype");
+                return String.Format("{0},{1},{2},{3}\n", res.Position, res.FirstName, res.LastName, res.DevelopmentArchetype);
+            }
+            return "";
+        }
+
+        // Positions whose retail archetype rows use both profiles (friendly 1-12).
+        // Every other position (K,P,FS,SS,C,G,T) only ever has profile 0 rows (friendly 1-6) in retail data.
+        private static readonly string[] sDualProfilePositions = new string[] {
+            "QB", "WR", "CB", "RB", "FB", "TE", "OLB", "ILB", "DT", "DE"
+        };
+
+        /// <summary>
+        /// Flags a DevelopmentArchetype value retail would never generate for this position.
+        /// This only reports mismatches -- it never changes the player's value.
+        /// </summary>
+        private void ValidateDevelopmentArchetype(List<string> playerParts, PlayerValidationResult res)
+        {
+            string archetypeStr = Get(playerParts, "DevelopmentArchetype");
+            if (String.IsNullOrEmpty(archetypeStr))
+                return; // field not present in this key; nothing to check
+
+            int archetype;
+            if (!Int32.TryParse(archetypeStr, out archetype))
+                return;
+
+            string pos = Get(playerParts, "Position");
+            bool dualProfile = Array.IndexOf(sDualProfilePositions, pos) > -1;
+            int max = dualProfile ? 12 : 6;
+
+            if (archetype < 1 || archetype > max)
+            {
+                res.Invalid = true;
+            }
+        }
+
         private void ValidateWeight(List<string> playerParts, PlayerValidationResult res)
         {
             string pos = Get(playerParts, "Position");
@@ -241,6 +331,7 @@ namespace NFL2K5Tool
         public String BodyType  { get; set; }
         public String Height    { get; set; }
         public String Weight    { get; set; }
+        public String DevelopmentArchetype { get; set; }
 
         public bool Invalid { get; set; }
     }

@@ -117,7 +117,7 @@ namespace NFL2K5Tool
             }
         }
         private string mKeyString = "";
-        private const string mSkillsString = "Speed,Agility,Strength,Jumping,Coverage,PassRush,RunCoverage,PassBlocking,RunBlocking,Catch,RunRoute,BreakTackle,HoldOntoBall,PowerRunStyle,PassAccuracy,PassArmStrength,PassReadCoverage,Tackle,KickPower,KickAccuracy,Stamina,Durability,Leadership,Scramble,Composure,Consistency,Aggressiveness,";
+        private const string mSkillsString = "Speed,Agility,Strength,Jumping,Coverage,PassRush,RunCoverage,PassBlocking,RunBlocking,Catch,RunRoute,BreakTackle,HoldOntoBall,PowerRunStyle,PassAccuracy,PassArmStrength,PassReadCoverage,Tackle,KickPower,KickAccuracy,Stamina,Durability,Leadership,Scramble,Composure,Consistency,Aggressiveness,DevelopmentArchetype,";
         private const string mAppearanceString = "JerseyNumber,College,DOB,PBP,Photo,YearsPro,Hand,Weight,Height,BodyType,Skin,Face,Dreads,Helmet,FaceMask,Visor,EyeBlack,MouthPiece,LeftGlove,RightGlove,LeftWrist,RightWrist,LeftElbow,RightElbow,Sleeves,LeftShoe,RightShoe,NeckRoll,Turtleneck,";
         
         /// <summary>
@@ -225,6 +225,18 @@ namespace NFL2K5Tool
                 ssc.Name = ssc.Text = skill;
                 ssc.ValueChanged += new EventHandler(ValueChanged);
                 c = ssc;
+            }
+            else if (skill == "DevelopmentArchetype")
+            {
+                // Hidden franchise-aging archetype, shown as a friendly 1-12 number (see
+                // EnumDefinitions.PlayerOffsets.DevelopmentArchetype for the encoding and which
+                // positions actually use 7-12). Run "Validate Players" to check position fit.
+                IntAttrControl iac = new IntAttrControl();
+                iac.Name = iac.Text = skill;
+                iac.Min = 1;
+                iac.Max = 12;
+                iac.ValueChanged += new EventHandler(ValueChanged);
+                c = iac;
             }
             else
             {

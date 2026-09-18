@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -41,6 +41,15 @@ namespace NFL2K5Tool
         JerseyNumber = 0x20, // & 0x21
         FaceMask = 0x21, // part if Wacko Visor is in this byte too (FaceMask = val & 0x1F >> 1)
         Face = 0x22, // part of Wacko Visor is in this byte too (Face = Val >>1 )
+        DevelopmentArchetype = 0x24, // Raw high nibble (bits 4-7) = profile*8+subtype (profile: bit7 0/1, subtype: bits4-6 0-7,
+                                      // retail only ever uses subtype 0-5). GetAttribute/SetAttribute expose this as a compact
+                                      // 1-12 number instead of the raw 0-15 nibble, skipping the two always-unused subtype
+                                      // slots per profile (raw 6,7,14,15): friendly = profile*6 + subtype + 1.
+                                      //   1-6  = profile 0, subtype 0-5 (every position can use these)
+                                      //   7-12 = profile 1, subtype 0-5 (only QB,WR,CB,RB,FB,TE,OLB,ILB,DT,DE use these)
+                                      // K,P,FS,SS,C,G,T only ever have friendly 1-6 in retail data.
+                                      // Low nibble (bits 0-3) is Contract "Years Remaining", not yet exposed here.
+                                      // Reverse-engineered from default.xbe by the cruuz/2k-football-mod-tools project.
         YearsPro = 0x25,
         Depth = 0x29,
         Weight = 0x2A, // 150 + value
@@ -80,10 +89,11 @@ namespace NFL2K5Tool
     public enum AppearanceAttributes
     {
         College = 200, // starting here so that we have no collisions with the PlayerOffsets enum
-        DOB, YearsPro, PBP, Photo, Hand, Weight, Height, BodyType, Skin, Face, Dreads, Helmet, FaceMask, Visor, 
-        EyeBlack,  MouthPiece, LeftGlove, RightGlove, LeftWrist, RightWrist, LeftElbow, 
+        DOB, YearsPro, PBP, Photo, Hand, Weight, Height, BodyType, Skin, Face, Dreads, Helmet, FaceMask, Visor,
+        EyeBlack,  MouthPiece, LeftGlove, RightGlove, LeftWrist, RightWrist, LeftElbow,
         RightElbow, Sleeves, LeftShoe, RightShoe, NeckRoll, Turtleneck
     }
+
     /// <summary> enum for positions </summary>
     public enum Positions
     {
@@ -311,7 +321,6 @@ namespace NFL2K5Tool
         HighTeam
     }
 
-
     public enum Game
     {
         HomeTeam,
@@ -328,8 +337,8 @@ namespace NFL2K5Tool
     {
         KR1 = 0x195,
         KR2 = 0x196,
-        LS  = 0x198,
-        PR  = 0x199
+        LS = 0x198,
+        PR = 0x199
     }
 
     public enum CoachOffsets
@@ -351,7 +360,7 @@ namespace NFL2K5Tool
         SuperBowlLosses = 0x3A,
         PlayoffWins = 0x34,
         PlayoffLosses = 0x36,
-        
+
         Photo = 0x40,
 
         // where do you see this stuff anyways?
