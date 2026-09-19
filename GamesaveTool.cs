@@ -1378,6 +1378,46 @@ namespace NFL2K5Tool
 
         public int MaxPlayers { get { return mMaxPlayers; } }
 
+        public void BuildNamePointerOwners(out Dictionary<int, List<int>> fnameOwners, out Dictionary<int, List<int>> lnameOwners)
+        {
+            fnameOwners = new Dictionary<int, List<int>>(mMaxPlayers);
+            lnameOwners = new Dictionary<int, List<int>>(mMaxPlayers);
+            for (int player = 0; player <= mMaxPlayers; player++)
+            {
+                int ptrLoc = player * cPlayerDataLength + FirstPlayerFnamePointerLoc;
+                int fAddr = GetPointerDestination(ptrLoc);
+                int lAddr = GetPointerDestination(ptrLoc + 4);
+
+                if (!fnameOwners.ContainsKey(fAddr))
+                    fnameOwners[fAddr] = new List<int>();
+                fnameOwners[fAddr].Add(player);
+
+                if (!lnameOwners.ContainsKey(lAddr))
+                    lnameOwners[lAddr] = new List<int>();
+                lnameOwners[lAddr].Add(player);
+            }
+        }
+
+        /// <summary>
+        /// True if this player's first name pointer is currently shared with at least one other player.
+        /// </summary>
+        public bool IsFirstNameShared(int player, Dictionary<int, List<int>> fnameOwners)
+        {
+            int ptrLoc = player * cPlayerDataLength + FirstPlayerFnamePointerLoc;
+            int addr = GetPointerDestination(ptrLoc);
+            return fnameOwners.ContainsKey(addr) && fnameOwners[addr].Count > 1;
+        }
+
+        /// <summary>
+        /// True if this player's last name pointer is currently shared with at least one other player.
+        /// </summary>
+        public bool IsLastNameShared(int player, Dictionary<int, List<int>> lnameOwners)
+        {
+            int ptrLoc = player * cPlayerDataLength + FirstPlayerFnamePointerLoc + 4;
+            int addr = GetPointerDestination(ptrLoc);
+            return lnameOwners.ContainsKey(addr) && lnameOwners[addr].Count > 1;
+        }
+
         private string mCustomKey = null;
         /// <summary>
         /// The attributes key

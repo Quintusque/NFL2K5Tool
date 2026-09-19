@@ -172,9 +172,10 @@ namespace NFL2K5Tool
             }
 
             SetText(builder.ToString());
+            ColorizeSharedNames();
         }
 
-        Regex mColorizeRegex = new Regex("^[A-Z]+,[A-Za-z \\.']+,[A-Z,a-z ']+,", RegexOptions.Multiline);
+        Regex mColorizeRegex = new Regex(@"^([A-Z]+),([A-Za-z \.'-]+),([A-Z,a-z '-]+),", RegexOptions.Multiline);
         
         /// <summary>
         /// Sets the text box text and colorizes the player names
@@ -193,6 +194,59 @@ namespace NFL2K5Tool
                 mTextBox.SelectionColor = nameColorToolStripMenuItem.ForeColor;
             }
             mTextBox.Visible = true;
+        }
+
+        /// <summary>
+        /// Overrides the default player-line coloring applied by SetText(): red if the
+        /// player's first or last name pointer is currently shared with another player
+        /// (editing this player in-place would silently corrupt every other player at
+        /// that address), blue if the name is unique. Draft Class rows are left in the
+        /// default color, since Draft Class edits are always routed through the safe
+        /// repoint path (useExistingName) rather than in-place mutation, regardless of
+        /// how widely their names are shared.
+        /// </summary>
+        private void ColorizeSharedNames()
+        {
+            if (mTool == null)
+                return;
+
+            List<int> playerOrder = new List<int>();
+            if (listTeamsToolStripMenuItem.Checked)
+            {
+                string[] teams = GamesaveTool.Teams;
+                for (int t = 0; t < teams.Length; t++)
+                    playerOrder.AddRange(mTool.GetPlayerIndexesForTeam(teams[t]));
+            }
+            if (listFreeAgentsToolStripMenuItem.Checked)
+                playerOrder.AddRange(mTool.GetPlayerIndexesForTeam("FreeAgents"));
+            if (listDraftClassToolStripMenuItem.Checked)
+                playerOrder.AddRange(mTool.GetPlayerIndexesForTeam("DraftClass"));
+
+            Dictionary<int, List<int>> fnameOwners;
+            Dictionary<int, List<int>> lnameOwners;
+            mTool.BuildNamePointerOwners(out fnameOwners, out lnameOwners);
+
+            MatchCollection mc = mColorizeRegex.Matches(mTextBox.Text);
+            for (int i = 0; i < mc.Count && i < playerOrder.Count; i++)
+            {
+                int player = playerOrder[i];
+                if (player >= GamesaveTool.FirstDraftClassPlayer)
+                    continue; // leave Draft Class rows in the default color
+
+                bool fnameShared = mTool.IsFirstNameShared(player, fnameOwners);
+                bool lnameShared = mTool.IsLastNameShared(player, lnameOwners);
+
+                Group fnameGroup = mc[i].Groups[2];
+                Group lnameGroup = mc[i].Groups[3];
+
+                mTextBox.SelectionStart = fnameGroup.Index;
+                mTextBox.SelectionLength = fnameGroup.Length;
+                mTextBox.SelectionColor = fnameShared ? Color.Red : Color.Blue;
+
+                mTextBox.SelectionStart = lnameGroup.Index;
+                mTextBox.SelectionLength = lnameGroup.Length;
+                mTextBox.SelectionColor = lnameShared ? Color.Red : Color.Blue;
+            }
         }
 
         private void scheduleToolStripMenuItem_Click(object sender, EventArgs e)
