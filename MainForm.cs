@@ -175,7 +175,7 @@ namespace NFL2K5Tool
             ColorizeSharedNames();
         }
 
-        Regex mColorizeRegex = new Regex("^[A-Z]+,[A-Za-z \\.']+,[A-Z,a-z ']+,", RegexOptions.Multiline);
+        Regex mColorizeRegex = new Regex(@"^([A-Z]+),([A-Za-z \.'-]+),([A-Z,a-z '-]+),", RegexOptions.Multiline);
         
         /// <summary>
         /// Sets the text box text and colorizes the player names
@@ -233,10 +233,19 @@ namespace NFL2K5Tool
                 if (player >= GamesaveTool.FirstDraftClassPlayer)
                     continue; // leave Draft Class rows in the default color
 
-                bool shared = mTool.IsFirstNameShared(player, fnameOwners) || mTool.IsLastNameShared(player, lnameOwners);
-                mTextBox.SelectionStart = mc[i].Index;
-                mTextBox.SelectionLength = mc[i].Length - 1;
-                mTextBox.SelectionColor = shared ? Color.Red : Color.Blue;
+                bool fnameShared = mTool.IsFirstNameShared(player, fnameOwners);
+                bool lnameShared = mTool.IsLastNameShared(player, lnameOwners);
+
+                Group fnameGroup = mc[i].Groups[2];
+                Group lnameGroup = mc[i].Groups[3];
+
+                mTextBox.SelectionStart = fnameGroup.Index;
+                mTextBox.SelectionLength = fnameGroup.Length;
+                mTextBox.SelectionColor = fnameShared ? Color.Red : Color.Blue;
+
+                mTextBox.SelectionStart = lnameGroup.Index;
+                mTextBox.SelectionLength = lnameGroup.Length;
+                mTextBox.SelectionColor = lnameShared ? Color.Red : Color.Blue;
             }
         }
 
