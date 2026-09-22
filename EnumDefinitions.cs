@@ -10,6 +10,22 @@ Roster,
 Franchise
 }
 
+/// <summary>
+/// Reserved numeric ranges for the attribute-dispatch enums. PlayerOffsets is implicitly
+/// "everything below AppearanceAttributesStart" and needs no explicit range here.
+/// Each range has headroom for future growth without renumbering anything or touching
+/// the dispatch logic in InputParser.cs. Ranges are deliberately non-overlapping and
+/// closed (inclusive start and end), so checks against them don't depend on evaluation
+/// order the way the old single-sentinel "attr >= AppearanceAttributes.College" test did.
+/// </summary>
+public static class AttributeRanges
+{
+public const int AppearanceAttributesStart = 200;
+public const int AppearanceAttributesEnd = 260;   // reserved through 260; last real member is Turtleneck = 226
+public const int ContractDetailsStart = 300;
+public const int ContractDetailsEnd = 320;        // reserved through 320; last real member is ContractBonus = 304
+}
+
 // Addresses are based on a franchise file, not a roster file.
 /// Code to map player attributes to locations 
 public enum PlayerOffsets
@@ -31,9 +47,8 @@ public enum PlayerOffsets
 College=0,
 PBP = 4,
 Photo= 6,
-ContractValue = 0x0A, // 16-bit LE, units = $10,000 (raw 377 = $3.77m). Read/written as a whole
-                       // word in GamesaveTool via dedicated GetContractValue/SetContractValue
-                       // methods, not the generic GetAttribute/SetAttribute switch.
+ContractValue = 0x0A, // 16-bit LE, units = $10,000 (raw 377 = $3,770,000). Byte-offset constant only --
+                       // dispatched through the ContractDetails enum below, not through GetAttribute/SetAttribute.
 Helmet_LeftShoe_RightShoe = 0x0c, // LShoe is last 3 bits; helmet is 7th bit; RShoe is bits 4,5,6 
 Turtleneck_Body_EyeBlack_Hand_Dreads = 0x18, // Shared: Skin(8), Turtleneck(bits6&7), Body(4&5), EyeBlack(3), Hand(2), Dreads(1) (most sig --> least sig )
 DOB = 0x19, // Skin is shared in the second nibble at this location.
@@ -54,15 +69,12 @@ DevelopmentArchetype = 0x24, // Raw high nibble (bits 4-7) = profile*8+subtype (
 // Confirmed three independent ways: this GetAttribute/SetAttribute code, the studio's
 // roster-record byte map (which had this nibble flagged "unknown" before this was found),
 // and SOFTDRINK's disassembly of the live aging routine in default.xbe.
-// Low nibble (bits 0-3) is Contract "Years Remaining" -- NOT a PlayerOffsets member (see note
-// below), to avoid colliding with this case in GetAttribute/SetAttribute's switch. Read/written
-// directly in GamesaveTool via dedicated GetContractYearsRemaining/SetContractYearsRemaining
-// methods that mask only that nibble and never touch GetAttribute/SetAttribute.
+// Low nibble (bits 0-3) is Contract Years Remaining -- byte-offset constant lives on
+// ContractDetails.ContractYearsRemaining below; not a PlayerOffsets member, to avoid
+// colliding with this case in GetAttribute/SetAttribute's switch (same underlying value).
 YearsPro = 0x25,
 ContractType = 0x26,  // Low nibble (bits 0-3). High nibble (bits 4-7) is the signing bonus percent
-                       // code (0-7 = 0%,10%...70%), read/written directly in GamesaveTool -- same
-                       // byte, different nibble, no separate enum entry needed (same pattern as
-                       // DevelopmentArchetype/Contract Years Remaining sharing 0x24).
+                       // code (0-7 = 0%,10%...70%) -- byte-offset constant only; see ContractDetails.
 ContractLength = 0x27, // Low nibble (bits 0-3). High nibble unknown/unused -- preserved, never written.
 Depth = 0x29,
 Weight = 0x2A, // 150 + value
@@ -114,12 +126,39 @@ Ascending,
 BackLoad
 }
 
+/// <summary>
+/// Values fall within AttributeRanges.AppearanceAttributesStart..AppearanceAttributesEnd (200-260).
+/// College=200 starts the range with room to spare from PlayerOffsets' highest real value (0x51=81),
+/// and there's headroom above Turtleneck=226 for future appearance fields before hitting 260.
+/// </summary>
 public enum AppearanceAttributes
 {
 College = 200, // starting here so that we have no collisions with the PlayerOffsets enum
 DOB, YearsPro, PBP, Photo, Hand, Weight, Height, BodyType, Skin, Face, Dreads, Helmet, FaceMask, Visor,
 EyeBlack, MouthPiece, LeftGlove, RightGlove, LeftWrist, RightWrist, LeftElbow,
 RightElbow, Sleeves, LeftShoe, RightShoe, NeckRoll, Turtleneck
+}
+
+/// <summary>
+/// Contract fields, dispatched independently from PlayerOffsets (raw ratings/skills) and
+/// AppearanceAttributes (cosmetics) -- a third parallel category with its own reserved range,
+/// AttributeRanges.ContractDetailsStart..ContractDetailsEnd (300-320), well clear of both of the
+/// others. This is where ContractYearsRemaining and ContractBonus live as real enum members (they
+/// have no PlayerOffsets equivalent, since ContractYearsRemaining would collide with
+/// DevelopmentArchetype's underlying value and ContractBonus has no independent byte of its own).
+/// ContractValue, ContractType, and ContractLength are listed here too, even though they also have
+/// PlayerOffsets members for byte-offset math -- the PlayerOffsets versions are for locating the
+/// byte; these are for generic dispatch (GetPlayerContractAttribute/SetPlayerContractAttribute),
+/// the same relationship AppearanceAttributes has with the handful of PlayerOffsets-backed fields
+/// it wraps (DOB, YearsPro, PBP, Photo, Weight, Height).
+/// </summary>
+public enum ContractDetails
+{
+ContractValue = 300,
+ContractYearsRemaining,
+ContractLength,
+ContractType,
+ContractBonus
 }
 
 /// enum for positions 

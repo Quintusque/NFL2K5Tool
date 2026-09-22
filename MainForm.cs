@@ -127,7 +127,7 @@ StringBuilder builder = new StringBuilder(5000);
 
 if (listTeamsToolStripMenuItem.Checked || listFreeAgentsToolStripMenuItem.Checked || listDraftClassToolStripMenuItem.Checked)
 {
-builder.Append(mTool.GetKey(listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked));
+builder.Append(mTool.GetKey(listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, listContractDetailsToolStripMenuItem.Checked));
 builder.Append("\n");
 }
 
@@ -135,23 +135,13 @@ builder.Append("\n# Uncomment line below to Set Salary Cap -> 198.2M\n");
 builder.Append("# SET(0x9ACCC, 0x38060300)\n\n");
 
 if (listTeamsToolStripMenuItem.Checked)
-builder.Append(mTool.GetLeaguePlayers(listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, listSpecialTeamsToolStripMenuItem.Checked));
+builder.Append(mTool.GetLeaguePlayers(listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, listSpecialTeamsToolStripMenuItem.Checked, listContractDetailsToolStripMenuItem.Checked));
 
 if (listFreeAgentsToolStripMenuItem.Checked)
-builder.Append(mTool.GetTeamPlayers("FreeAgents", listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, false));
+builder.Append(mTool.GetTeamPlayers("FreeAgents", listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, false, listContractDetailsToolStripMenuItem.Checked));
 
 if (listDraftClassToolStripMenuItem.Checked)
-builder.Append(mTool.GetTeamPlayers("DraftClass", listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, false));
-
-if (listContractDetailsToolStripMenuItem.Checked)
-{
-builder.Append(GamesaveTool.ContractKey);
-builder.Append("\n");
-if (listTeamsToolStripMenuItem.Checked)
-builder.Append(mTool.GetLeagueContractDetails());
-if (listFreeAgentsToolStripMenuItem.Checked)
-builder.Append(mTool.GetTeamContractDetails("FreeAgents"));
-}
+builder.Append(mTool.GetTeamPlayers("DraftClass", listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, false, listContractDetailsToolStripMenuItem.Checked));
 
 if (listCoachesToolStripMenuItem1.Checked)
 {
