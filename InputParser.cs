@@ -177,7 +177,7 @@ ProcessLines(lines);
 
 public void ProcessLines(string[] lines)
 {
-Tool.GetKey(true, true);
+Tool.GetKey(true, true, true);
 int i = 0;
 try
 {

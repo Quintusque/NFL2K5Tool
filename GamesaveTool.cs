@@ -1446,6 +1446,8 @@ namespace NFL2K5Tool
                 size += mAttributeOrder.Length;
             if (appearance)
                 size += mAppearanceOrder.Length;
+            if (contract) 
+                size += mContractOrder.Length;
             mOrder = new int[size];
             mOrder[0] = (int)PlayerOffsets.Position;
             mOrder[1] = -1;
@@ -1477,7 +1479,13 @@ namespace NFL2K5Tool
             }
             if (contract)
             {
-                builder.Append("ContractValue,ContractYearsRemaining,ContractLength,ContractType,ContractBonus,");
+                foreach (ContractDetails c in mContractOrder)
+                {
+                    builder.Append(c.ToString());
+                    builder.Append(",");
+                    mOrder[i] = (int)c;
+                    i++;
+                }
             }
             return builder.ToString();
         }
@@ -1512,40 +1520,54 @@ namespace NFL2K5Tool
             if (a == "lname") return -2;
             try
             {
-                AppearanceAttributes aa = (AppearanceAttributes)Enum.Parse(typeof(AppearanceAttributes), a);
-                return (int)aa;
-            }
-            catch { }
-            try
-            {
-                PlayerOffsets po = (PlayerOffsets)Enum.Parse(typeof(PlayerOffsets), a);
-                return (int)po;
+                ContractDetails cd = (ContractDetails)Enum.Parse(typeof(ContractDetails), a);
+                return (int)cd;
             }
             catch
             {
-                StaticUtils.AddError("Attribute '" + a + "' is invalid");
+                try
+                {
+                    AppearanceAttributes aa = (AppearanceAttributes)Enum.Parse(typeof(AppearanceAttributes), a);
+                    return (int)aa;
+                }
+                catch
+                {
+                    try
+                    {
+                        PlayerOffsets po = (PlayerOffsets)Enum.Parse(typeof(PlayerOffsets), a);
+                        return (int)po;
+                    }
+                    catch
+                    {
+                        StaticUtils.AddError("Attribute " + a + " is invalid");
+                        return Int32.MinValue;
+                    }
+                }
             }
-            return Int32.MinValue;
         }
 
         /// <summary>
         /// Default Attribute order: 
         /// #fname,lname,position,number,Speed,Agility,Strength,Jumping,Coverage,PassRush,RunCoverage,PassBlocking,RunBlocking,Catch,RunRoute,
         /// BreakTackle,HoldOnToBall,PowerRunStyle,PassAccuracy,PassArmStrength,PassReadCoverage,Tackle,KickPower,KickAccuracy,Stamana,Durability,
-        /// Leadership,Scramble,Composure,Consistency,Aggressiveness,
+        /// Leadership,Scramble,Composure,Consistency,Aggressiveness,DevelopmentArchetype
         /// 
         /// Default appearance order:
         /// College,DOB,Hand,Weight,Height,BodyType,Skin,Face,Dreads,Helmet,FaceMask,FaceShield,EyeBlack,MouthPiece,LeftGlove,RightGlove,
         /// LeftWrist,RightWrist,LeftElbow,RightElbow,Sleeves,LeftShoe,RightShoe,NeckRoll,Turtleneck
+        ///
+        /// Default contract order:
+        /// ContractValue,ContractYearsRemaining,ContractLength,ContractType,ContractBonus
         /// </summary>
         /// <param name="player"></param>
         /// <param name="attributes"></param>
         /// <param name="appearance"></param>
+        /// <param name="contract"></param>
         /// <returns></returns>
         public string GetPlayerData(int player, bool attributes, bool appearance, bool contract = false)
         {
             StringBuilder builder = new StringBuilder(300);
-            int attr=0;
+            int attr = 0;
             if (mOrder == null || mOrder.Length < 1)
                 GetKey(attributes, appearance, contract);
             for (int i = 0; i < mOrder.Length; i++)
@@ -1555,25 +1577,14 @@ namespace NFL2K5Tool
                     builder.Append(GetPlayerFirstName(player));
                 else if (attr == -2)
                     builder.Append(GetPlayerLastName(player));
-                else if (attr >= (int)AppearanceAttributes.College)
+                else if (attr >= AttributeRanges.ContractDetailsStart && attr <= AttributeRanges.ContractDetailsEnd)
+                    builder.Append(GetPlayerContractAttribute(player, (ContractDetails)attr));
+                else if (attr >= AttributeRanges.AppearanceAttributesStart && attr <= AttributeRanges.AppearanceAttributesEnd)
                     GetPlayerAppearanceAttribute(player, (AppearanceAttributes)attr, builder);
                 else
                     builder.Append(GetAttribute(player, (PlayerOffsets)attr));
-                if(builder.Length > 0 && builder[builder.Length -1] != ',')
+                if (builder.Length > 0 && builder[builder.Length - 1] != ',')
                     builder.Append(",");
-            }
-            if (contract)
-            {
-                builder.Append(GetContractValue(player));
-                builder.Append(",");
-                builder.Append(GetContractYearsRemaining(player));
-                builder.Append(",");
-                builder.Append(GetContractLength(player));
-                builder.Append(",");
-                builder.Append(GetContractType(player));
-                builder.Append(",");
-                builder.Append(GetContractBonus(player));
-                builder.Append(",");
             }
             return builder.ToString();
         }
@@ -1758,6 +1769,14 @@ namespace NFL2K5Tool
                         PlayerOffsets.Stamina,         PlayerOffsets.Durability,       PlayerOffsets.Leadership,   PlayerOffsets.Scramble,      PlayerOffsets.Composure,
                         PlayerOffsets.Consistency,     PlayerOffsets.Aggressiveness,
                         PlayerOffsets.DevelopmentArchetype};
+
+        private ContractDetails[] mContractOrder = new ContractDetails[] {
+            ContractDetails.ContractValue,
+            ContractDetails.ContractYearsRemaining,
+            ContractDetails.ContractLength,
+            ContractDetails.ContractType,
+            ContractDetails.ContractBonus
+        };
 
         private void GetPlayerAttributes(int player, StringBuilder builder)
         {
