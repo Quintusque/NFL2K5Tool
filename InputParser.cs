@@ -768,10 +768,9 @@ if ( useExistingName && !CheckPlayerNameExists( attributes, out playerName ))
 StaticUtils.AddError("Could not find matching name in string database. player not added: "+ playerName);
 return false;
 }
-// Bounded by Tool.Order.Length (not just attributes.Count) so that trailing
-// read-only columns appended after the real fields -- e.g. Contract Details,
-// which are never registered in Tool.Order -- are safely skipped instead of
-// throwing an IndexOutOfRangeException on Tool.Order[i].
+// Bounded by Tool.Order.Length, not just attributes.Count, so that trailing
+// display-only columns with no corresponding Order entry are safely skipped
+// instead of throwing an IndexOutOfRangeException on Tool.Order[i].
 for (int i = 0; i < attributes.Count && i < Tool.Order.Length; i++)
 {
 try
