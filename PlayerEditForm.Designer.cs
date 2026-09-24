@@ -1,4 +1,4 @@
-﻿namespace NFL2K5Tool
+namespace NFL2K5Tool
 {
     partial class PlayerEditForm
     {
@@ -37,6 +37,7 @@
             this.mSkillsTab = new System.Windows.Forms.TabPage();
             this.mAppearanceTab = new System.Windows.Forms.TabPage();
             this.mGenericFacePictureBox = new System.Windows.Forms.PictureBox();
+            this.mContractTab = new System.Windows.Forms.TabPage();
             this.mCancelButton = new System.Windows.Forms.Button();
             this.mOkButton = new System.Windows.Forms.Button();
             this.m_TeamsComboBox = new System.Windows.Forms.ComboBox();
@@ -92,10 +93,11 @@
             // tabControl1
             // 
             this.tabControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.mSkillsTab);
             this.tabControl1.Controls.Add(this.mAppearanceTab);
+            this.tabControl1.Controls.Add(this.mContractTab);
             this.tabControl1.Location = new System.Drawing.Point(12, 51);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
@@ -132,6 +134,16 @@
             this.mGenericFacePictureBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.mGenericFacePictureBox.TabIndex = 1;
             this.mGenericFacePictureBox.TabStop = false;
+            // 
+            // mContractTab
+            // 
+            this.mContractTab.Location = new System.Drawing.Point(4, 22);
+            this.mContractTab.Name = "mContractTab";
+            this.mContractTab.Padding = new System.Windows.Forms.Padding(3);
+            this.mContractTab.Size = new System.Drawing.Size(637, 408);
+            this.mContractTab.TabIndex = 2;
+            this.mContractTab.Text = "Contract";
+            this.mContractTab.UseVisualStyleBackColor = true;
             // 
             // mCancelButton
             // 
@@ -369,6 +381,7 @@
         private System.Windows.Forms.TabControl tabControl1;
         private System.Windows.Forms.TabPage mSkillsTab;
         private System.Windows.Forms.TabPage mAppearanceTab;
+        private System.Windows.Forms.TabPage mContractTab;
         private System.Windows.Forms.Button mCancelButton;
         private System.Windows.Forms.Button mOkButton;
         private System.Windows.Forms.ComboBox m_TeamsComboBox;
