@@ -558,6 +558,45 @@ MessageBox.Show(
 }
 }
 
+private void checkContractYearsToolStripMenuItem_Click(object sender, EventArgs e)
+{
+    ValidateContractYears();
+}
+
+private void ValidateContractYears()
+{
+    string key = GetKey(mTextBox.Text);
+    if (key == null)
+        key = mTool.GetKey(listAttributesToolStripMenuItem.Checked, listApperanceToolStripMenuItem.Checked, true);
+
+    PlayerValidator v = new PlayerValidator(key);
+    if (mTextBox.Text.Length > 100)
+    {
+        string results = v.ValidatePlayersContractYears(mTextBox.Text);
+        if (results.Length > 0)
+        {
+            MessageForm ef = new MessageForm(SystemIcons.Warning);
+            ef.TextClicked += new EventHandler(validatorForm_TextClicked);
+            ef.ShowCancelButton = false;
+            ef.MessageText = results;
+            ef.Text = "Warning, verify player contracts";
+            ef.Closed += new EventHandler(validatorForm_Closed);
+            ef.Show(this);
+        }
+        else
+        {
+            statusBar1.Text = "No Issues Found with Contract Years Remaining";
+        }
+    }
+    else
+    {
+        MessageBox.Show(
+            "This function will validate each player's Contract Years Remaining against their Contract Length, based on the text in the main text area.\n" +
+            "List the players in order to use it"
+            , "Player Validation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+}
+
 void validatorForm_Closed(object sender, EventArgs e)
 {
 MessageForm ef = sender as MessageForm;
