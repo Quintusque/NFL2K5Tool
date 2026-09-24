@@ -119,7 +119,8 @@ namespace NFL2K5Tool
         private string mKeyString = "";
         private const string mSkillsString = "Speed,Agility,Strength,Jumping,Coverage,PassRush,RunCoverage,PassBlocking,RunBlocking,Catch,RunRoute,BreakTackle,HoldOntoBall,PowerRunStyle,PassAccuracy,PassArmStrength,PassReadCoverage,Tackle,KickPower,KickAccuracy,Stamina,Durability,Leadership,Scramble,Composure,Consistency,Aggressiveness,DevelopmentArchetype,";
         private const string mAppearanceString = "JerseyNumber,College,DOB,PBP,Photo,YearsPro,Hand,Weight,Height,BodyType,Skin,Face,Dreads,Helmet,FaceMask,Visor,EyeBlack,MouthPiece,LeftGlove,RightGlove,LeftWrist,RightWrist,LeftElbow,RightElbow,Sleeves,LeftShoe,RightShoe,NeckRoll,Turtleneck,";
-        
+        private const string mContractString = "ContractValue,ContractYearsRemaining,ContractLength,ContractType,ContractBonus,";
+
         /// <summary>
         /// Returns true when a new key is set, false if it's the same key
         /// </summary>
@@ -154,6 +155,7 @@ namespace NFL2K5Tool
             {
                 ClearControls(mSkillsTab);
                 ClearControls(mAppearanceTab);
+                ClearControls(mContractTab);
 
                 foreach (string attr in mKeyParts)
                 {
@@ -170,6 +172,15 @@ namespace NFL2K5Tool
                         AddAppearance(attr);
                     }
                 }
+                
+                foreach (string attr in mKeyParts)
+                {
+                    if (attr.Length > 0 && mContractString.IndexOf(attr + ",") > -1)
+                    {
+                        AddContract(attr);
+                    }
+                }
+                
                 if (mSkillsTab.Controls.Count == 0 && mAppearanceTab.Controls.Count > 0)
                 {
                     tabControl1.SelectedIndex = 1;
@@ -249,6 +260,43 @@ namespace NFL2K5Tool
             int col = mSkillsTab.Controls.Count % 5;
             c.Location = new Point(col * c.Width, row * c.Height);
             mSkillsTab.Controls.Add(c);
+        }
+
+        private void AddContract(string contractField)
+        {
+            Control c = null;
+            if (contractField == "ContractType")
+            {
+                StringSelectionControl ssc = new StringSelectionControl();
+                ssc.RepresentedValue = typeof(ContractType);
+                ssc.Name = ssc.Text = contractField;
+                ssc.ValueChanged += new EventHandler(ValueChanged);
+                c = ssc;
+            }
+            else if (contractField == "ContractBonus")
+            {
+                StringSelectionControl ssc = new StringSelectionControl();
+                ssc.Name = ssc.Text = contractField;
+                ssc.SetItems(new string[] { "0", "10", "20", "30", "40", "50", "60", "70" });
+                ssc.ValueChanged += new EventHandler(ValueChanged);
+                c = ssc;
+            }
+            else
+            {
+                IntAttrControl iac = new IntAttrControl();
+                iac.Name = iac.Text = contractField;
+                if (contractField == "ContractValue")
+                {
+                    iac.Min = 0;
+                    iac.Max = 65535; // stored as a raw 16-bit value in $10,000 units
+                }
+                iac.ValueChanged += new EventHandler(ValueChanged);
+                c = iac;
+            }
+            int row = mContractTab.Controls.Count / 5;
+            int col = mContractTab.Controls.Count % 5;
+            c.Location = new Point(col * c.Width, row * c.Height);
+            mContractTab.Controls.Add(c);
         }
 
         private void AddAppearance(string appearance)
@@ -718,7 +766,8 @@ namespace NFL2K5Tool
         {
             if (!SetControlValue(mSkillsTab, controlName, val))
                 if (!SetControlValue(mAppearanceTab, controlName, val))
-                    SetControlValue(this, controlName, val);
+                    if (!SetControlValue(mContractTab, controlName, val))
+                        SetControlValue(this, controlName, val);
         }
 
         private bool SetControlValue(Control parentControl, string controlName, string val)
@@ -788,9 +837,10 @@ namespace NFL2K5Tool
         private string GetControlValue(string controlName)
         {
             string retVal = "";
-            if ((retVal = GetControlValue(mSkillsTab, controlName)) == null )
-                if((retVal = GetControlValue(mAppearanceTab, controlName)) == null)
-                    retVal = GetControlValue(this, controlName);
+            if ((retVal = GetControlValue(mSkillsTab, controlName)) == null)
+                if ((retVal = GetControlValue(mAppearanceTab, controlName)) == null)
+                    if ((retVal = GetControlValue(mContractTab, controlName)) == null)
+                        retVal = GetControlValue(this, controlName);
             return retVal;
         }
 

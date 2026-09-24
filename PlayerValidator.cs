@@ -164,6 +164,87 @@ namespace NFL2K5Tool
             }
         }
 
+        /// <summary>
+        /// Processes the text looking for players whose ContractYearsRemaining exceeds
+        /// their ContractLength. Adds warnings when something seems incorrect. This is a
+        /// separate check from ValidatePlayers/ValidatePlayersArchetype -- it never changes
+        /// any values.
+        /// </summary>
+        /// <param name="text">The league/team data</param>
+        public string ValidatePlayersContractYears(string text)
+        {
+            StringBuilder builder = new StringBuilder();
+            text = text.Replace("\r\n", "\n");
+            char[] chars = "\n".ToCharArray();
+            string[] lines = text.Split(chars);
+            string line;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                line = lines[i].Trim();
+                if (line.StartsWith("#") || line.StartsWith("Key="))
+                {
+                }
+                else if (line.IndexOf(",") > -1 && !( // don't check the following lines
+                    line.StartsWith("Coach")
+                    || line.StartsWith("SET")
+                    || line.StartsWith("ApplyFormula")
+                ))
+                {
+                    try { builder.Append(ValidatePlayerContractYears(line)); }
+                    catch (Exception) { Console.WriteLine("# issue validating line: " + line); }
+                }
+            }
+            if (builder.Length > 0)
+            {
+                builder.Insert(0, "LookupAndModify\n" +
+                    "Key=Position,fname,lname,ContractYearsRemaining,ContractLength\n" +
+                    "#Team = FreeAgents (this is a comment but allows player editor to function on this data)\n"
+                );
+            }
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Will add a warning if this player's ContractYearsRemaining exceeds their
+        /// ContractLength. This only reports mismatches -- it never changes the player's value.
+        /// </summary>
+        /// <param name="line">The player line</param>
+        public string ValidatePlayerContractYears(string line)
+        {
+            List<string> playerParts = InputParser.ParsePlayerLine(line);
+            PlayerValidationResult res = new PlayerValidationResult(Get(playerParts, "Position"), Get(playerParts, "fname"), Get(playerParts, "lname"));
+            ValidateContractYears(playerParts, res);
+            if (res.Invalid)
+            {
+                res.ContractYearsRemaining = Get(playerParts, "ContractYearsRemaining");
+                res.ContractLength = Get(playerParts, "ContractLength");
+                return String.Format("{0},{1},{2},{3},{4}\n", res.Position, res.FirstName, res.LastName, res.ContractYearsRemaining, res.ContractLength);
+            }
+            return "";
+        }
+
+        /// <summary>
+        /// Flags a player whose ContractYearsRemaining exceeds their ContractLength --
+        /// a state that shouldn't be reachable in retail data. This only reports
+        /// mismatches -- it never changes the player's value.
+        /// </summary>
+        private void ValidateContractYears(List<string> playerParts, PlayerValidationResult res)
+        {
+            string yearsStr = Get(playerParts, "ContractYearsRemaining");
+            string lengthStr = Get(playerParts, "ContractLength");
+            if (String.IsNullOrEmpty(yearsStr) || String.IsNullOrEmpty(lengthStr))
+                return; // field not present in this key; nothing to check
+
+            int years, length;
+            if (!Int32.TryParse(yearsStr, out years) || !Int32.TryParse(lengthStr, out length))
+                return;
+
+            if (years > length)
+            {
+                res.Invalid = true;
+            }
+        }
+
         private void ValidateWeight(List<string> playerParts, PlayerValidationResult res)
         {
             string pos = Get(playerParts, "Position");
@@ -332,6 +413,8 @@ namespace NFL2K5Tool
         public String Height    { get; set; }
         public String Weight    { get; set; }
         public String DevelopmentArchetype { get; set; }
+        public String ContractYearsRemaining { get; set; }
+        public String ContractLength { get; set; }
 
         public bool Invalid { get; set; }
     }

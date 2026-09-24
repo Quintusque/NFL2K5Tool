@@ -533,12 +533,12 @@ namespace NFL2K5Tool
         /// <param name="appearance">true to list out appearance</param>
         /// <param name="specialTeamers"> true to list special teams</param>
         /// <returns></returns>
-        public string GetLeaguePlayers(bool attributes, bool appearance, bool specialTeamers)
+        public string GetLeaguePlayers(bool attributes, bool appearance, bool specialTeamers, bool contract = false)
         {
             StringBuilder builder = new StringBuilder(300 * 55 * 35);
             for (int i = 0; i < 32; i++)
             {
-                builder.Append(GetTeamPlayers(sTeamsDataOrder[i], attributes, appearance, specialTeamers));
+                builder.Append(GetTeamPlayers(sTeamsDataOrder[i], attributes, appearance, specialTeamers, contract));
             }
             return builder.ToString();
         }
@@ -550,7 +550,7 @@ namespace NFL2K5Tool
         /// <param name="attributes">include skill attributes</param>
         /// <param name="appearance">include appearance attributes.</param>
         /// <returns>string with all the players for the given team.</returns>
-        public string GetDraftClass(bool attributes, bool appearance)
+        public string GetDraftClass(bool attributes, bool appearance, bool contract = false)
         {
             int limit  = FirstDraftClassPlayer +  mDraftClassSize;
             if( mSaveType == SaveType.Roster)
@@ -565,7 +565,7 @@ namespace NFL2K5Tool
 
             for (int i = FirstDraftClassPlayer; i < limit; i++)
             {
-                builder.Append(GetPlayerData(i, attributes, appearance));
+                builder.Append(GetPlayerData(i, attributes, appearance, contract));
                 builder.Append("\n");
             }
             return builder.ToString();
@@ -589,14 +589,14 @@ namespace NFL2K5Tool
         /// <param name="attributes">include skill attributes</param>
         /// <param name="appearance">include appearance attributes.</param>
         /// <returns>string with all the players for the given team.</returns>
-        public string GetTeamPlayers(string team, bool attributes, bool appearance, bool specialTeams)
+        public string GetTeamPlayers(string team, bool attributes, bool appearance, bool specialTeams, bool contract = false)
         {
             int teamIndex = GetTeamIndex(team);
             int teamPlayerPointersStart = teamIndex * cTeamDiff + m49ersPlayerPointersStart;
             if ("FreeAgents".Equals(team, StringComparison.InvariantCultureIgnoreCase))
                 teamPlayerPointersStart = GetPointerDestination(mFreeAgentPlayersPointer);
             else if ("DraftClass".Equals(team, StringComparison.InvariantCultureIgnoreCase))
-                return GetDraftClass(attributes, appearance);
+                return GetDraftClass(attributes, appearance, contract);
 
             List<int> playerIndexes = GetPlayerIndexesForTeam(team);
             StringBuilder builder = new StringBuilder(300 * playerIndexes.Count + 1);
@@ -608,7 +608,7 @@ namespace NFL2K5Tool
 
             for (int i = 0; i < playerIndexes.Count; i++)
             {
-                builder.Append(GetPlayerData(playerIndexes[i], attributes, appearance));
+                builder.Append(GetPlayerData(playerIndexes[i], attributes, appearance, contract));
                 builder.Append("\n");
             }
             if (specialTeams)
@@ -1422,20 +1422,20 @@ namespace NFL2K5Tool
         /// <summary>
         /// The attributes key
         /// </summary>
-        public string GetKey(bool attributes, bool appearance)
+        public string GetKey(bool attributes, bool appearance, bool contract = false)
         {
             string retVal = "";
             if (!string.IsNullOrEmpty(mCustomKey))
                 retVal = mCustomKey;
             else 
-                retVal = GetDefaultKey(attributes, appearance);
+                retVal = GetDefaultKey(attributes, appearance, contract);
 
             if (retVal[0] != '#')
                 retVal = "#" + retVal;
             return retVal;
         }
 
-        public string GetDefaultKey(bool attributes, bool appearance)
+        public string GetDefaultKey(bool attributes, bool appearance, bool contract = false)
         {
             StringBuilder builder = new StringBuilder(350);
             StringBuilder dummy = new StringBuilder(200);
@@ -1446,6 +1446,8 @@ namespace NFL2K5Tool
                 size += mAttributeOrder.Length;
             if (appearance)
                 size += mAppearanceOrder.Length;
+            if (contract) 
+                size += mContractOrder.Length;
             mOrder = new int[size];
             mOrder[0] = (int)PlayerOffsets.Position;
             mOrder[1] = -1;
@@ -1473,6 +1475,16 @@ namespace NFL2K5Tool
                         builder.Append(app.ToString());
                         builder.Append(",");
                     }
+                }
+            }
+            if (contract)
+            {
+                foreach (ContractDetails c in mContractOrder)
+                {
+                    builder.Append(c.ToString());
+                    builder.Append(",");
+                    mOrder[i] = (int)c;
+                    i++;
                 }
             }
             return builder.ToString();
@@ -1508,42 +1520,56 @@ namespace NFL2K5Tool
             if (a == "lname") return -2;
             try
             {
-                AppearanceAttributes aa = (AppearanceAttributes)Enum.Parse(typeof(AppearanceAttributes), a);
-                return (int)aa;
-            }
-            catch { }
-            try
-            {
-                PlayerOffsets po = (PlayerOffsets)Enum.Parse(typeof(PlayerOffsets), a);
-                return (int)po;
+                ContractDetails cd = (ContractDetails)Enum.Parse(typeof(ContractDetails), a);
+                return (int)cd;
             }
             catch
             {
-                StaticUtils.AddError("Attribute '" + a + "' is invalid");
+                try
+                {
+                    AppearanceAttributes aa = (AppearanceAttributes)Enum.Parse(typeof(AppearanceAttributes), a);
+                    return (int)aa;
+                }
+                catch
+                {
+                    try
+                    {
+                        PlayerOffsets po = (PlayerOffsets)Enum.Parse(typeof(PlayerOffsets), a);
+                        return (int)po;
+                    }
+                    catch
+                    {
+                        StaticUtils.AddError("Attribute " + a + " is invalid");
+                        return Int32.MinValue;
+                    }
+                }
             }
-            return Int32.MinValue;
         }
 
         /// <summary>
         /// Default Attribute order: 
         /// #fname,lname,position,number,Speed,Agility,Strength,Jumping,Coverage,PassRush,RunCoverage,PassBlocking,RunBlocking,Catch,RunRoute,
         /// BreakTackle,HoldOnToBall,PowerRunStyle,PassAccuracy,PassArmStrength,PassReadCoverage,Tackle,KickPower,KickAccuracy,Stamana,Durability,
-        /// Leadership,Scramble,Composure,Consistency,Aggressiveness,
+        /// Leadership,Scramble,Composure,Consistency,Aggressiveness,DevelopmentArchetype
         /// 
         /// Default appearance order:
         /// College,DOB,Hand,Weight,Height,BodyType,Skin,Face,Dreads,Helmet,FaceMask,FaceShield,EyeBlack,MouthPiece,LeftGlove,RightGlove,
         /// LeftWrist,RightWrist,LeftElbow,RightElbow,Sleeves,LeftShoe,RightShoe,NeckRoll,Turtleneck
+        ///
+        /// Default contract order:
+        /// ContractValue,ContractYearsRemaining,ContractLength,ContractType,ContractBonus
         /// </summary>
         /// <param name="player"></param>
         /// <param name="attributes"></param>
         /// <param name="appearance"></param>
+        /// <param name="contract"></param>
         /// <returns></returns>
-        public string GetPlayerData(int player, bool attributes, bool appearance)
+        public string GetPlayerData(int player, bool attributes, bool appearance, bool contract = false)
         {
             StringBuilder builder = new StringBuilder(300);
-            int attr=0;
+            int attr = 0;
             if (mOrder == null || mOrder.Length < 1)
-                GetKey(attributes, appearance);
+                GetKey(attributes, appearance, contract);
             for (int i = 0; i < mOrder.Length; i++)
             {
                 attr = mOrder[i];
@@ -1551,11 +1577,13 @@ namespace NFL2K5Tool
                     builder.Append(GetPlayerFirstName(player));
                 else if (attr == -2)
                     builder.Append(GetPlayerLastName(player));
-                else if (attr >= (int)AppearanceAttributes.College)
+                else if (attr >= AttributeRanges.ContractDetailsStart && attr <= AttributeRanges.ContractDetailsEnd)
+                    builder.Append(GetPlayerContractAttribute(player, (ContractDetails)attr));
+                else if (attr >= AttributeRanges.AppearanceAttributesStart && attr <= AttributeRanges.AppearanceAttributesEnd)
                     GetPlayerAppearanceAttribute(player, (AppearanceAttributes)attr, builder);
                 else
                     builder.Append(GetAttribute(player, (PlayerOffsets)attr));
-                if(builder.Length > 0 && builder[builder.Length -1] != ',')
+                if (builder.Length > 0 && builder[builder.Length - 1] != ',')
                     builder.Append(",");
             }
             return builder.ToString();
@@ -1741,6 +1769,14 @@ namespace NFL2K5Tool
                         PlayerOffsets.Stamina,         PlayerOffsets.Durability,       PlayerOffsets.Leadership,   PlayerOffsets.Scramble,      PlayerOffsets.Composure,
                         PlayerOffsets.Consistency,     PlayerOffsets.Aggressiveness,
                         PlayerOffsets.DevelopmentArchetype};
+
+        private ContractDetails[] mContractOrder = new ContractDetails[] {
+            ContractDetails.ContractValue,
+            ContractDetails.ContractYearsRemaining,
+            ContractDetails.ContractLength,
+            ContractDetails.ContractType,
+            ContractDetails.ContractBonus
+        };
 
         private void GetPlayerAttributes(int player, StringBuilder builder)
         {
@@ -3546,6 +3582,191 @@ namespace NFL2K5Tool
                             photoFaceMap[photo]);
                     }
                 }
+            }
+        }
+
+        private const int cContractYearsRemainingOffset = 0x24; // low nibble only; high nibble is DevelopmentArchetype
+
+        /// <summary>Contract value in $10,000 units, exactly as stored (raw 377 = $3,770,000).</summary>
+        public string GetContractValue(int player)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractValue;
+            int raw = GameSaveData[loc] | (GameSaveData[loc + 1] << 8);
+            return raw.ToString();
+        }
+
+        public void SetContractValue(int player, string strVal)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractValue;
+            int raw = Int32.Parse(strVal);
+            SetByte(loc, (byte)(raw & 0xFF));
+            SetByte(loc + 1, (byte)((raw >> 8) & 0xFF));
+        }
+
+        /// <summary>Years left on the contract, 0-15. Preserves DevelopmentArchetype's high nibble.</summary>
+        public string GetContractYearsRemaining(int player)
+        {
+            int loc = GetPlayerDataStart(player) + cContractYearsRemainingOffset;
+            int val = GameSaveData[loc] & 0x0F;
+            return val.ToString();
+        }
+
+        public void SetContractYearsRemaining(int player, string strVal)
+        {
+            int loc = GetPlayerDataStart(player) + cContractYearsRemainingOffset;
+            int val = Int32.Parse(strVal) & 0x0F;
+            int v1 = (GameSaveData[loc] & 0xF0) | val; // preserve DevelopmentArchetype high nibble
+            SetByte(loc, (byte)v1);
+        }
+
+        /// <summary>Contract type name, e.g. "Balanced", "UpDown" -- no spaces. Preserves the bonus nibble.</summary>
+        public string GetContractType(int player)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractType;
+            int nibble = GameSaveData[loc] & 0x0F;
+            ContractType ct = (ContractType)nibble;
+            return ct.ToString();
+        }
+
+        public void SetContractType(int player, string strVal)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractType;
+            ContractType ct = (ContractType)Enum.Parse(typeof(ContractType), strVal, true);
+            int v1 = (GameSaveData[loc] & 0xF0) | ((int)ct & 0x0F); // preserve ContractBonus high nibble
+            SetByte(loc, (byte)v1);
+        }
+
+        /// <summary>Signing bonus as a bare percent number, e.g. "50", "0" -- no percent sign, no "N/A".</summary>
+        public string GetContractBonus(int player)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractType; // shares ContractType's byte
+            int nibble = (GameSaveData[loc] >> 4) & 0x0F;
+            return (nibble * 10).ToString();
+        }
+
+        public void SetContractBonus(int player, string strVal)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractType;
+            int percent = Int32.Parse(strVal);
+            int nibble = (percent / 10) & 0x0F;
+            int v1 = (GameSaveData[loc] & 0x0F) | (nibble << 4); // preserve ContractType low nibble
+            SetByte(loc, (byte)v1);
+        }
+
+        /// <summary>Total contract length in years, 0-15.</summary>
+        public string GetContractLength(int player)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractLength;
+            int val = GameSaveData[loc] & 0x0F;
+            return val.ToString();
+        }
+
+        public void SetContractLength(int player, string strVal)
+        {
+            int loc = GetPlayerDataStart(player) + (int)PlayerOffsets.ContractLength;
+            int val = Int32.Parse(strVal) & 0x0F;
+            int v1 = (GameSaveData[loc] & 0xF0) | val; // preserve unknown high nibble
+            SetByte(loc, (byte)v1);
+        }
+
+        /// <summary>The fixed Contract Details header, mirrored by GetPlayerContractData's column order.</summary>
+        public const string ContractKey = "Position,fname,lname,ContractValue,ContractYearsRemaining,ContractLength,ContractType,ContractBonus";
+
+        /// <summary>One player's contract row: Position,fname,lname,Value,YearsRemaining,Length,Type,Bonus,</summary>
+        public string GetPlayerContractData(int player)
+        {
+            StringBuilder builder = new StringBuilder(100);
+            builder.Append(GetPlayerPosition(player));
+            builder.Append(",");
+            builder.Append(GetPlayerFirstName(player));
+            builder.Append(",");
+            builder.Append(GetPlayerLastName(player));
+            builder.Append(",");
+            builder.Append(GetContractValue(player));
+            builder.Append(",");
+            builder.Append(GetContractYearsRemaining(player));
+            builder.Append(",");
+            builder.Append(GetContractLength(player));
+            builder.Append(",");
+            builder.Append(GetContractType(player));
+            builder.Append(",");
+            builder.Append(GetContractBonus(player));
+            builder.Append(",");
+            return builder.ToString();
+        }
+
+        /// <summary>Contract rows for every player on the given team/FreeAgents. DraftClass returns empty --
+        /// unsigned prospects don't carry a meaningful contract.</summary>
+        public string GetTeamContractDetails(string team)
+        {
+            if ("DraftClass".Equals(team, StringComparison.InvariantCultureIgnoreCase))
+                return "";
+            List<int> playerIndexes = GetPlayerIndexesForTeam(team);
+            StringBuilder builder = new StringBuilder(300 + playerIndexes.Count * 60);
+            builder.Append(team);
+            builder.Append(" Players ");
+            builder.Append(playerIndexes.Count);
+            builder.Append("\r\n");
+            for (int i = 0; i < playerIndexes.Count; i++)
+            {
+                builder.Append(GetPlayerContractData(playerIndexes[i]));
+                builder.Append("\r\n");
+            }
+            return builder.ToString();
+        }
+
+        /// <summary>Contract rows for all 32 clubs (mirrors GetLeaguePlayers' scope -- Free Agents and
+        /// Draft Class are added separately by the caller, same as the existing Players listing).</summary>
+        public string GetLeagueContractDetails()
+        {
+            StringBuilder builder = new StringBuilder(300 * 55 * 32);
+            for (int i = 0; i < 32; i++)
+                builder.Append(GetTeamContractDetails(sTeamsDataOrder[i]));
+            return builder.ToString();
+        }
+        /// <summary>
+        /// Category-level dispatch for contract fields, mirroring GetPlayerAppearanceAttribute's
+        /// pattern exactly. Routes to the existing GetContractValue/GetContractYearsRemaining/
+        /// GetContractLength/GetContractType/GetContractBonus methods -- no new bit-masking logic
+        /// here at all, just switch-based routing on top of methods already verified correct.
+        /// </summary>
+        public string GetPlayerContractAttribute(int player, ContractDetails attr)
+        {
+            switch (attr)
+            {
+                case ContractDetails.ContractValue:
+                    return GetContractValue(player);
+                case ContractDetails.ContractYearsRemaining:
+                    return GetContractYearsRemaining(player);
+                case ContractDetails.ContractLength:
+                    return GetContractLength(player);
+                case ContractDetails.ContractType:
+                    return GetContractType(player);
+                case ContractDetails.ContractBonus:
+                    return GetContractBonus(player);
+            }
+            return "";
+        }
+
+        public void SetPlayerContractAttribute(int player, ContractDetails attr, string strVal)
+        {
+            switch (attr)
+            {
+                case ContractDetails.ContractValue:
+                    SetContractValue(player, strVal);
+                    break;
+                case ContractDetails.ContractYearsRemaining:
+                    SetContractYearsRemaining(player, strVal);
+                    break;
+                case ContractDetails.ContractLength:
+                    SetContractLength(player, strVal);
+                    break;
+                case ContractDetails.ContractType:
+                    SetContractType(player, strVal);
+                    break;
+                case ContractDetails.ContractBonus:
+                    SetContractBonus(player, strVal);
+                    break;
             }
         }
     }
