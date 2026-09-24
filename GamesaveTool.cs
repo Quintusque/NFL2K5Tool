@@ -41,7 +41,16 @@ namespace NFL2K5Tool
         private int mMaxPlayers = 2317; //1944(roster) including free agents and draft class
 
         public const int FirstDraftClassPlayer = 1937;
-        private const int mDraftClassSize = 380;
+        private const int mDraftClassSize = 380; // window CAPACITY (slots after the last real/free-agent
+                                                   // player), not the number of prospects actually in it --
+                                                   // see IsDraftClassProspect.
+
+        // player+0x08: the class generator's own marker. Bit 2 (0x04) = every rostered/free-agent
+        // retail record; bit 4 (0x10) = a slot the generator just wrote a prospect into. The disc's
+        // shipped prospects carry 0 here rather than the bit, so both read as "prospect".
+        private const int cPlayerTypeOffset = (int)PlayerOffsets.PlayerType;
+        private const byte cPlayerTypeNflFlag = 0x04;
+        private const byte cPlayerTypeProspectFlag = 0x10;
 
         private const int cPlayerDataLength = 0x54;
         private const int cTeamDiff = 0x1f4; // 500 bytes
@@ -544,26 +553,30 @@ namespace NFL2K5Tool
         }
 
         /// <summary>
-        /// Get all the players on Draft class.
-        /// I could not find pointers for the players, so I'm assuming the draft class is always 380 players for now.
+        /// Get all the players currently on the Draft class.
+        /// The prospect window (FirstDraftClassPlayer..+mDraftClassSize) is a fixed-size buffer the
+        /// game re-fills every time it (re)generates a class, but the number of prospects it actually
+        /// writes into that buffer varies by save (usually well under the 380-slot capacity) and is not
+        /// itself stored anywhere -- so instead of assuming every slot is a live prospect, each slot is
+        /// checked individually against the generator's own player+0x08 marker (see
+        /// IsDraftClassProspect / GetPlayerIndexesForTeam). A roster (non-franchise) file only ever
+        /// carries the disc's original prospects, so it is scanned rather than hardcoded to 7 as before.
         /// </summary>
         /// <param name="attributes">include skill attributes</param>
         /// <param name="appearance">include appearance attributes.</param>
         /// <returns>string with all the players for the given team.</returns>
         public string GetDraftClass(bool attributes, bool appearance, bool contract = false)
         {
-            int limit  = FirstDraftClassPlayer +  mDraftClassSize;
-            if( mSaveType == SaveType.Roster)
-                limit = FirstDraftClassPlayer + 7;
+            List<int> playerIndexes = GetPlayerIndexesForTeam("DraftClass");
 
-            StringBuilder builder = new StringBuilder(300 * mDraftClassSize + 1);
+            StringBuilder builder = new StringBuilder(300 * playerIndexes.Count + 1);
             builder.Append("\nTeam = ");
             builder.Append("DraftClass");
             builder.Append("    Players:");
-            builder.Append(mDraftClassSize);
+            builder.Append(playerIndexes.Count);
             builder.Append("\n");
 
-            for (int i = FirstDraftClassPlayer; i < limit; i++)
+            foreach (int i in playerIndexes)
             {
                 builder.Append(GetPlayerData(i, attributes, appearance, contract));
                 builder.Append("\n");
@@ -632,10 +645,18 @@ namespace NFL2K5Tool
                 teamPlayerPointersStart = GetPointerDestination( mFreeAgentPlayersPointer);
             else if ("DraftClass".Equals(team, StringComparison.InvariantCultureIgnoreCase))
             {
-                int lastDraftClassPlayer = FirstDraftClassPlayer + mDraftClassSize + 1;
+                // The prospect window is a fixed CAPACITY (mDraftClassSize slots), not a fixed
+                // population: the game re-generates only as many prospects as the current class
+                // actually has (usually well under 380) and marks each filled slot at player+0x08.
+                // Only list slots the generator has actually marked, so a smaller class doesn't come
+                // back padded with stale/unused leftover slots. See IsDraftClassProspect.
+                int lastDraftClassPlayer = FirstDraftClassPlayer + mDraftClassSize;
                 for (int i = FirstDraftClassPlayer; i < lastDraftClassPlayer; i++)
-                    retVal.Add(i);
-                
+                {
+                    if (IsDraftClassProspect(i))
+                        retVal.Add(i);
+                }
+
                 return retVal;
             }
 
@@ -1598,6 +1619,29 @@ namespace NFL2K5Tool
             if (player <= mMaxPlayers)
                 ret = mPlayerStart + player * cPlayerDataLength;
             return ret;
+        }
+
+        /// <summary>
+        /// True if the player-record slot at this index currently holds a live draft-class prospect.
+        /// Retail/franchise saves keep the prospect window at a fixed CAPACITY of
+        /// <see cref="FirstDraftClassPlayer"/>..+380, but the class generator re-fills only as many
+        /// of those slots as the current class actually has (usually well under 380) and marks each
+        /// filled slot at player+0x08: either 0 (the disc's own shipped prospects) or bit 4 (0x10) set
+        /// (the generator's runtime mark, FUN_002BE6F0 in the retail executable). Every other slot in
+        /// the window is either an untouched real player/free agent (bit 2, 0x04, set) or simply unused
+        /// leftover data from a prior, larger class -- neither of those should be listed as a prospect.
+        /// Reference: SOFTDRINK's byte-exact NFL2K5 roster map, cruuz/2k-football-mod-tools,
+        /// mod_editor/core/nfl2k5_roster_records.py (player_type field / FLAG_PROSPECT).
+        /// </summary>
+        public bool IsDraftClassProspect(int player)
+        {
+            int loc = GetPlayerDataStart(player);
+            if (loc < 0 || loc + cPlayerTypeOffset >= GameSaveData.Length)
+                return false;
+            byte playerType = GameSaveData[loc + cPlayerTypeOffset];
+            if ((playerType & cPlayerTypeNflFlag) != 0)
+                return false; // flagged as a real NFL/free-agent player, never a prospect
+            return playerType == 0 || (playerType & cPlayerTypeProspectFlag) != 0;
         }
 
         private void GetPlayerAppearance(int player, StringBuilder builder)
