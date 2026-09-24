@@ -289,6 +289,20 @@ mTextBox.SetSearchString();
 
 private void debugDialogMenuItem_Click(object sender, EventArgs e)
 {
+// TEMPORARY: also dump the draft-class name diagnostic every time Debug Dialog is opened,
+// next to the running exe, so it's easy to find and attach. Safe to remove once the
+// draft-class name investigation is done.
+try
+{
+string diagPath = System.IO.Path.Combine(Application.StartupPath, "DraftClassDiagnostic.txt");
+mTool.DiagnoseDraftClassNames(diagPath);
+MessageBox.Show("Draft class diagnostic written to:\n" + diagPath, "Diagnostic");
+}
+catch (Exception ex)
+{
+MessageBox.Show("Diagnostic failed: " + ex.Message, "Diagnostic Error");
+}
+
 DebugDialog form = new DebugDialog();
 form.Tool = mTool;
 form.Show(this);

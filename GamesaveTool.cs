@@ -588,6 +588,70 @@ namespace NFL2K5Tool
             return builder.ToString();
         }
 
+        /// <summary>
+        /// TEMPORARY diagnostic: writes a detailed, line-by-line trace of every draft-class player
+        /// this build reads -- raw name pointer bytes, resolved name-pointer destinations, decoded
+        /// first/last name, and the exact field count GetPlayerData(attributes:true, appearance:true)
+        /// produces for that player -- to help track down why some rows read back with a shifted or
+        /// wrong field (e.g. "Gordon,39" instead of "Gordon,Parks"). Not wired into any menu/feature;
+        /// call it manually (e.g. from a throwaway button or the debug dialog) and send the resulting
+        /// text file back for review. Safe to delete once the investigation is done.
+        /// </summary>
+        public void DiagnoseDraftClassNames(string outputPath)
+        {
+            List<int> playerIndexes = GetPlayerIndexesForTeam("DraftClass");
+            using (StreamWriter w = new StreamWriter(outputPath, false, Encoding.UTF8))
+            {
+                w.WriteLine("DraftClass diagnostic -- " + playerIndexes.Count + " players, mPlayerStart=0x" + mPlayerStart.ToString("X") + ", cPlayerDataLength=0x" + cPlayerDataLength.ToString("X"));
+                w.WriteLine("FirstDraftClassPlayer=" + FirstDraftClassPlayer + " mDraftClassSize=" + mDraftClassSize);
+                w.WriteLine();
+
+                foreach (int player in playerIndexes)
+                {
+                    int ptrLoc = player * cPlayerDataLength + FirstPlayerFnamePointerLoc;
+
+                    // raw pointer bytes exactly as stored (before resolving)
+                    string fPtrBytes = BitConverter.ToString(GameSaveData, ptrLoc, 4);
+                    string lPtrBytes = BitConverter.ToString(GameSaveData, ptrLoc + 4, 4);
+
+                    int fDest = GetPointerDestination(ptrLoc);
+                    int lDest = GetPointerDestination(ptrLoc + 4);
+
+                    string firstName = GetPlayerFirstName(player);
+                    string lastName = GetPlayerLastName(player);
+
+                    byte playerType = GameSaveData[GetPlayerDataStart(player) + cPlayerTypeOffset];
+
+                    string fullRow = GetPlayerData(player, true, true, false);
+                    int fieldCount = fullRow.Split(',').Length;
+
+                    w.WriteLine(string.Format(
+                        "idx={0,5}  type=0x{1:X2}  fPtr={2} (->0x{3:X})  lPtr={4} (->0x{5:X})  first='{6}'  last='{7}'  fields={8}",
+                        player, playerType, fPtrBytes, fDest, lPtrBytes, lDest, firstName, lastName, fieldCount));
+
+                    // if either name looks suspicious (empty, or contains a digit -- names should never
+                    // contain digits, so a digit strongly suggests we've walked into numeric attribute
+                    // bytes instead of a name string), dump the raw bytes around both string locations.
+                    bool suspicious = string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName)
+                        || ContainsDigit(firstName) || ContainsDigit(lastName);
+                    if (suspicious)
+                    {
+                        w.WriteLine("  ^^ SUSPICIOUS -- raw bytes at fDest (32 bytes): " + BitConverter.ToString(GameSaveData, Math.Max(0, fDest), 32));
+                        w.WriteLine("  ^^ SUSPICIOUS -- raw bytes at lDest (32 bytes): " + BitConverter.ToString(GameSaveData, Math.Max(0, lDest), 32));
+                        w.WriteLine("  ^^ SUSPICIOUS -- full GetPlayerData row: " + fullRow);
+                    }
+                }
+            }
+        }
+
+        private static bool ContainsDigit(string s)
+        {
+            foreach (char c in s)
+                if (char.IsDigit(c))
+                    return true;
+            return false;
+        }
+
         public byte[] GetTeamBytes(string team)
         {
             int teamIndex = GetTeamIndex(team);
