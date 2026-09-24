@@ -45,11 +45,15 @@ namespace NFL2K5Tool
                                                    // player), not the number of prospects actually in it --
                                                    // see IsDraftClassProspect.
 
-        // player+0x08: the class generator's own marker. Bit 2 (0x04) = every rostered/free-agent
-        // retail record; bit 4 (0x10) = a slot the generator just wrote a prospect into. The disc's
-        // shipped prospects carry 0 here rather than the bit, so both read as "prospect".
+        // player+0x08: the class generator's own marker, bit 4 (0x10). Real rostered/free-agent
+        // players carry 0x04 with bit 4 clear (verified against BaseRoster.DAT and a real Xbox
+        // franchise save: every one of the 1937 real players is exactly 0x04 in both). Prospects
+        // carry either 0x00 (disc-shipped, not yet generated -- BaseRoster.DAT's 373 empty slots) or
+        // have bit 4 set ALONGSIDE other bits once the generator has actually written one in (the real
+        // mid-franchise save showed 0x16 = 0b00010110 for all 380 of its filled prospect slots -- bit 4
+        // set together with bit 2, so bit 2 does NOT exclude a slot from being a prospect; only bit 4's
+        // presence, or a fully zero byte, decides it). Do not add a bit-2 exclusion here.
         private const int cPlayerTypeOffset = (int)PlayerOffsets.PlayerType;
-        private const byte cPlayerTypeNflFlag = 0x04;
         private const byte cPlayerTypeProspectFlag = 0x10;
 
         private const int cPlayerDataLength = 0x54;
@@ -1625,11 +1629,14 @@ namespace NFL2K5Tool
         /// True if the player-record slot at this index currently holds a live draft-class prospect.
         /// Retail/franchise saves keep the prospect window at a fixed CAPACITY of
         /// <see cref="FirstDraftClassPlayer"/>..+380, but the class generator re-fills only as many
-        /// of those slots as the current class actually has (usually well under 380) and marks each
-        /// filled slot at player+0x08: either 0 (the disc's own shipped prospects) or bit 4 (0x10) set
-        /// (the generator's runtime mark, FUN_002BE6F0 in the retail executable). Every other slot in
-        /// the window is either an untouched real player/free agent (bit 2, 0x04, set) or simply unused
-        /// leftover data from a prior, larger class -- neither of those should be listed as a prospect.
+        /// of those slots as the current class actually has and marks each filled slot at player+0x08
+        /// with bit 4 (0x10) set (the generator's runtime mark, FUN_002BE6F0 in the retail executable),
+        /// alongside whatever other bits happen to be set -- bit 4 is additive, not exclusive, of the
+        /// 0x04 "NFL player" bit. Verified on two real files: BaseRoster.DAT's 373 not-yet-generated
+        /// slots are a flat 0x00, and a real Xbox franchise save's 380 filled slots are all 0x16
+        /// (0b00010110 -- bit 4 set together with bit 2). Every one of the 1937 real players in both
+        /// files is exactly 0x04 (bit 4 clear), so bit 4 alone reliably separates prospects from real
+        /// players without needing to exclude bit 2.
         /// Reference: SOFTDRINK's byte-exact NFL2K5 roster map, cruuz/2k-football-mod-tools,
         /// mod_editor/core/nfl2k5_roster_records.py (player_type field / FLAG_PROSPECT).
         /// </summary>
@@ -1639,8 +1646,6 @@ namespace NFL2K5Tool
             if (loc < 0 || loc + cPlayerTypeOffset >= GameSaveData.Length)
                 return false;
             byte playerType = GameSaveData[loc + cPlayerTypeOffset];
-            if ((playerType & cPlayerTypeNflFlag) != 0)
-                return false; // flagged as a real NFL/free-agent player, never a prospect
             return playerType == 0 || (playerType & cPlayerTypeProspectFlag) != 0;
         }
 
