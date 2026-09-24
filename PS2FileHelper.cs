@@ -322,13 +322,18 @@ namespace NFL2K5Tool
                 byte[] hashThis = File.ReadAllBytes(saveGameFile);
                 SignPS2Nfl2K5Save(extraFile, hashThis);
                 // create max file
+                // File order matches a genuine, real PS2 save (BASLUS-20919-ESPN-NFL-2K5-BaseRost),
+                // verified byte-for-byte: icon.sys, VIEW.ICO, TYPE, <savegame>, EXTRA -- not the
+                // savegame-first order used previously. Not confirmed to matter for game/hardware
+                // loading, but costs nothing to match and removes one more difference from a known
+                // working reference file.
                 ARMaxNativeMethods.InitMaxSave();
                 ARMaxNativeMethods.SetRootDir(saveName);
-                ARMaxNativeMethods.AddFileToSave(dataFileName);
-                ARMaxNativeMethods.AddFileToSave(typeFile);
-                ARMaxNativeMethods.AddFileToSave(extraFile);
                 ARMaxNativeMethods.AddFileToSave(dirName + "icon.sys");
                 ARMaxNativeMethods.AddFileToSave(dirName + "VIEW.ICO");
+                ARMaxNativeMethods.AddFileToSave(typeFile);
+                ARMaxNativeMethods.AddFileToSave(dataFileName);
+                ARMaxNativeMethods.AddFileToSave(extraFile);
                 string filename = fi.Directory.FullName+ "\\BASLUS-20919" + saveName + ".max";
                 ARMaxNativeMethods.SaveMaxFile(filename);
                 FixPS2MaxFileCompressedSize(filename);
