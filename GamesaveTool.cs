@@ -1662,6 +1662,17 @@ namespace NFL2K5Tool
             for (int i = 0; i < mOrder.Length; i++)
             {
                 attr = mOrder[i];
+                // Track the length BEFORE appending this field's value so we can tell whether this
+                // specific call added anything -- some fields (first/last name in particular) can
+                // legitimately decode to an empty string (e.g. a corrupted/blanked name in the save
+                // data). The old check below only looked at the builder's last character, which is
+                // ambiguous when the current field appended nothing: it would see the PREVIOUS
+                // field's trailing comma and wrongly skip adding a new one, silently merging two
+                // columns into one and shifting every later field left by one position (this is the
+                // root cause of rows like "Gordon,39,..." instead of "Gordon,,39,..." when a player's
+                // last name is empty). Appending a comma unconditionally after every field keeps each
+                // column aligned regardless of whether the value itself was empty.
+                int lengthBeforeField = builder.Length;
                 if (attr == -1)
                     builder.Append(GetPlayerFirstName(player));
                 else if (attr == -2)
@@ -1672,7 +1683,10 @@ namespace NFL2K5Tool
                     GetPlayerAppearanceAttribute(player, (AppearanceAttributes)attr, builder);
                 else
                     builder.Append(GetAttribute(player, (PlayerOffsets)attr));
-                if (builder.Length > 0 && builder[builder.Length - 1] != ',')
+
+                bool fieldAppendedNothing = builder.Length == lengthBeforeField;
+                bool alreadyEndsWithComma = builder.Length > 0 && builder[builder.Length - 1] == ',';
+                if (fieldAppendedNothing || !alreadyEndsWithComma)
                     builder.Append(",");
             }
             return builder.ToString();
