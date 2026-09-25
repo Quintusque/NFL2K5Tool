@@ -41,7 +41,20 @@ namespace NFL2K5Tool
         private int mMaxPlayers = 2317; //1944(roster) including free agents and draft class
 
         public const int FirstDraftClassPlayer = 1937;
-        private const int mDraftClassSize = 380;
+        private const int mDraftClassSize = 380; // window CAPACITY (slots after the last real/free-agent
+                                                   // player), not the number of prospects actually in it --
+                                                   // see IsDraftClassProspect.
+
+        // player+0x08: the class generator's own marker, bit 4 (0x10). Real rostered/free-agent
+        // players carry 0x04 with bit 4 clear (verified against BaseRoster.DAT and a real Xbox
+        // franchise save: every one of the 1937 real players is exactly 0x04 in both). Prospects
+        // carry either 0x00 (disc-shipped, not yet generated -- BaseRoster.DAT's 373 empty slots) or
+        // have bit 4 set ALONGSIDE other bits once the generator has actually written one in (the real
+        // mid-franchise save showed 0x16 = 0b00010110 for all 380 of its filled prospect slots -- bit 4
+        // set together with bit 2, so bit 2 does NOT exclude a slot from being a prospect; only bit 4's
+        // presence, or a fully zero byte, decides it). Do not add a bit-2 exclusion here.
+        private const int cPlayerTypeOffset = (int)PlayerOffsets.PlayerType;
+        private const byte cPlayerTypeProspectFlag = 0x10;
 
         private const int cPlayerDataLength = 0x54;
         private const int cTeamDiff = 0x1f4; // 500 bytes
@@ -544,31 +557,99 @@ namespace NFL2K5Tool
         }
 
         /// <summary>
-        /// Get all the players on Draft class.
-        /// I could not find pointers for the players, so I'm assuming the draft class is always 380 players for now.
+        /// Get all the players currently on the Draft class.
+        /// The prospect window (FirstDraftClassPlayer..+mDraftClassSize) is a fixed-size buffer the
+        /// game re-fills every time it (re)generates a class, but the number of prospects it actually
+        /// writes into that buffer varies by save (usually well under the 380-slot capacity) and is not
+        /// itself stored anywhere -- so instead of assuming every slot is a live prospect, each slot is
+        /// checked individually against the generator's own player+0x08 marker (see
+        /// IsDraftClassProspect / GetPlayerIndexesForTeam). A roster (non-franchise) file only ever
+        /// carries the disc's original prospects, so it is scanned rather than hardcoded to 7 as before.
         /// </summary>
         /// <param name="attributes">include skill attributes</param>
         /// <param name="appearance">include appearance attributes.</param>
         /// <returns>string with all the players for the given team.</returns>
         public string GetDraftClass(bool attributes, bool appearance, bool contract = false)
         {
-            int limit  = FirstDraftClassPlayer +  mDraftClassSize;
-            if( mSaveType == SaveType.Roster)
-                limit = FirstDraftClassPlayer + 7;
+            List<int> playerIndexes = GetPlayerIndexesForTeam("DraftClass");
 
-            StringBuilder builder = new StringBuilder(300 * mDraftClassSize + 1);
+            StringBuilder builder = new StringBuilder(300 * playerIndexes.Count + 1);
             builder.Append("\nTeam = ");
             builder.Append("DraftClass");
             builder.Append("    Players:");
-            builder.Append(mDraftClassSize);
+            builder.Append(playerIndexes.Count);
             builder.Append("\n");
 
-            for (int i = FirstDraftClassPlayer; i < limit; i++)
+            foreach (int i in playerIndexes)
             {
                 builder.Append(GetPlayerData(i, attributes, appearance, contract));
                 builder.Append("\n");
             }
             return builder.ToString();
+        }
+
+        /// <summary>
+        /// TEMPORARY diagnostic: writes a detailed, line-by-line trace of every draft-class player
+        /// this build reads -- raw name pointer bytes, resolved name-pointer destinations, decoded
+        /// first/last name, and the exact field count GetPlayerData(attributes:true, appearance:true)
+        /// produces for that player -- to help track down why some rows read back with a shifted or
+        /// wrong field (e.g. "Gordon,39" instead of "Gordon,Parks"). Not wired into any menu/feature;
+        /// call it manually (e.g. from a throwaway button or the debug dialog) and send the resulting
+        /// text file back for review. Safe to delete once the investigation is done.
+        /// </summary>
+        public void DiagnoseDraftClassNames(string outputPath)
+        {
+            List<int> playerIndexes = GetPlayerIndexesForTeam("DraftClass");
+            using (StreamWriter w = new StreamWriter(outputPath, false, Encoding.UTF8))
+            {
+                w.WriteLine("DraftClass diagnostic -- " + playerIndexes.Count + " players, mPlayerStart=0x" + mPlayerStart.ToString("X") + ", cPlayerDataLength=0x" + cPlayerDataLength.ToString("X"));
+                w.WriteLine("FirstDraftClassPlayer=" + FirstDraftClassPlayer + " mDraftClassSize=" + mDraftClassSize);
+                w.WriteLine();
+
+                foreach (int player in playerIndexes)
+                {
+                    int ptrLoc = player * cPlayerDataLength + FirstPlayerFnamePointerLoc;
+
+                    // raw pointer bytes exactly as stored (before resolving)
+                    string fPtrBytes = BitConverter.ToString(GameSaveData, ptrLoc, 4);
+                    string lPtrBytes = BitConverter.ToString(GameSaveData, ptrLoc + 4, 4);
+
+                    int fDest = GetPointerDestination(ptrLoc);
+                    int lDest = GetPointerDestination(ptrLoc + 4);
+
+                    string firstName = GetPlayerFirstName(player);
+                    string lastName = GetPlayerLastName(player);
+
+                    byte playerType = GameSaveData[GetPlayerDataStart(player) + cPlayerTypeOffset];
+
+                    string fullRow = GetPlayerData(player, true, true, false);
+                    int fieldCount = fullRow.Split(',').Length;
+
+                    w.WriteLine(string.Format(
+                        "idx={0,5}  type=0x{1:X2}  fPtr={2} (->0x{3:X})  lPtr={4} (->0x{5:X})  first='{6}'  last='{7}'  fields={8}",
+                        player, playerType, fPtrBytes, fDest, lPtrBytes, lDest, firstName, lastName, fieldCount));
+
+                    // if either name looks suspicious (empty, or contains a digit -- names should never
+                    // contain digits, so a digit strongly suggests we've walked into numeric attribute
+                    // bytes instead of a name string), dump the raw bytes around both string locations.
+                    bool suspicious = string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName)
+                        || ContainsDigit(firstName) || ContainsDigit(lastName);
+                    if (suspicious)
+                    {
+                        w.WriteLine("  ^^ SUSPICIOUS -- raw bytes at fDest (32 bytes): " + BitConverter.ToString(GameSaveData, Math.Max(0, fDest), 32));
+                        w.WriteLine("  ^^ SUSPICIOUS -- raw bytes at lDest (32 bytes): " + BitConverter.ToString(GameSaveData, Math.Max(0, lDest), 32));
+                        w.WriteLine("  ^^ SUSPICIOUS -- full GetPlayerData row: " + fullRow);
+                    }
+                }
+            }
+        }
+
+        private static bool ContainsDigit(string s)
+        {
+            foreach (char c in s)
+                if (char.IsDigit(c))
+                    return true;
+            return false;
         }
 
         public byte[] GetTeamBytes(string team)
@@ -632,10 +713,18 @@ namespace NFL2K5Tool
                 teamPlayerPointersStart = GetPointerDestination( mFreeAgentPlayersPointer);
             else if ("DraftClass".Equals(team, StringComparison.InvariantCultureIgnoreCase))
             {
-                int lastDraftClassPlayer = FirstDraftClassPlayer + mDraftClassSize + 1;
+                // The prospect window is a fixed CAPACITY (mDraftClassSize slots), not a fixed
+                // population: the game re-generates only as many prospects as the current class
+                // actually has (usually well under 380) and marks each filled slot at player+0x08.
+                // Only list slots the generator has actually marked, so a smaller class doesn't come
+                // back padded with stale/unused leftover slots. See IsDraftClassProspect.
+                int lastDraftClassPlayer = FirstDraftClassPlayer + mDraftClassSize;
                 for (int i = FirstDraftClassPlayer; i < lastDraftClassPlayer; i++)
-                    retVal.Add(i);
-                
+                {
+                    if (IsDraftClassProspect(i))
+                        retVal.Add(i);
+                }
+
                 return retVal;
             }
 
@@ -1573,6 +1662,17 @@ namespace NFL2K5Tool
             for (int i = 0; i < mOrder.Length; i++)
             {
                 attr = mOrder[i];
+                // Track the length BEFORE appending this field's value so we can tell whether this
+                // specific call added anything -- some fields (first/last name in particular) can
+                // legitimately decode to an empty string (e.g. a corrupted/blanked name in the save
+                // data). The old check below only looked at the builder's last character, which is
+                // ambiguous when the current field appended nothing: it would see the PREVIOUS
+                // field's trailing comma and wrongly skip adding a new one, silently merging two
+                // columns into one and shifting every later field left by one position (this is the
+                // root cause of rows like "Gordon,39,..." instead of "Gordon,,39,..." when a player's
+                // last name is empty). Appending a comma unconditionally after every field keeps each
+                // column aligned regardless of whether the value itself was empty.
+                int lengthBeforeField = builder.Length;
                 if (attr == -1)
                     builder.Append(GetPlayerFirstName(player));
                 else if (attr == -2)
@@ -1583,7 +1683,10 @@ namespace NFL2K5Tool
                     GetPlayerAppearanceAttribute(player, (AppearanceAttributes)attr, builder);
                 else
                     builder.Append(GetAttribute(player, (PlayerOffsets)attr));
-                if (builder.Length > 0 && builder[builder.Length - 1] != ',')
+
+                bool fieldAppendedNothing = builder.Length == lengthBeforeField;
+                bool alreadyEndsWithComma = builder.Length > 0 && builder[builder.Length - 1] == ',';
+                if (fieldAppendedNothing || !alreadyEndsWithComma)
                     builder.Append(",");
             }
             return builder.ToString();
@@ -1598,6 +1701,30 @@ namespace NFL2K5Tool
             if (player <= mMaxPlayers)
                 ret = mPlayerStart + player * cPlayerDataLength;
             return ret;
+        }
+
+        /// <summary>
+        /// True if the player-record slot at this index currently holds a live draft-class prospect.
+        /// Retail/franchise saves keep the prospect window at a fixed CAPACITY of
+        /// <see cref="FirstDraftClassPlayer"/>..+380, but the class generator re-fills only as many
+        /// of those slots as the current class actually has and marks each filled slot at player+0x08
+        /// with bit 4 (0x10) set (the generator's runtime mark, FUN_002BE6F0 in the retail executable),
+        /// alongside whatever other bits happen to be set -- bit 4 is additive, not exclusive, of the
+        /// 0x04 "NFL player" bit. Verified on two real files: BaseRoster.DAT's 373 not-yet-generated
+        /// slots are a flat 0x00, and a real Xbox franchise save's 380 filled slots are all 0x16
+        /// (0b00010110 -- bit 4 set together with bit 2). Every one of the 1937 real players in both
+        /// files is exactly 0x04 (bit 4 clear), so bit 4 alone reliably separates prospects from real
+        /// players without needing to exclude bit 2.
+        /// Reference: SOFTDRINK's byte-exact NFL2K5 roster map, cruuz/2k-football-mod-tools,
+        /// mod_editor/core/nfl2k5_roster_records.py (player_type field / FLAG_PROSPECT).
+        /// </summary>
+        public bool IsDraftClassProspect(int player)
+        {
+            int loc = GetPlayerDataStart(player);
+            if (loc < 0 || loc + cPlayerTypeOffset >= GameSaveData.Length)
+                return false;
+            byte playerType = GameSaveData[loc + cPlayerTypeOffset];
+            return playerType == 0 || (playerType & cPlayerTypeProspectFlag) != 0;
         }
 
         private void GetPlayerAppearance(int player, StringBuilder builder)

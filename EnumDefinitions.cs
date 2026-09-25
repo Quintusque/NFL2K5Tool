@@ -47,6 +47,13 @@ public enum PlayerOffsets
 College=0,
 PBP = 4,
 Photo= 6,
+PlayerType = 8, // 1 byte. Retail/prospect marker: 4 (bit 2) = real NFL/free-agent player; 0, or
+                // bit 4 (0x10) set = draft-class prospect (the class generator's own mark, written
+                // fresh over the fixed 380-slot prospect window every time the game (re)generates a
+                // class). Not part of mAttributeOrder/text import -- this is read internally by
+                // GetPlayerIndexesForTeam/GetDraftClass to tell a real prospect slot in that window
+                // from an empty/unused one, since retail classes are usually well under 380 players.
+                // Confirmed against SOFTDRINK's nfl2k5_roster_records.py (cruuz/2k-football-mod-tools).
 ContractValue = 0x0A, // 16-bit LE, units = $10,000 (raw 377 = $3,770,000). Byte-offset constant only --
                        // dispatched through the ContractDetails enum below, not through GetAttribute/SetAttribute.
 Helmet_LeftShoe_RightShoe = 0x0c, // LShoe is last 3 bits; helmet is 7th bit; RShoe is bits 4,5,6 
