@@ -15,7 +15,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
-// to COM components.  If you need to access a type in this assembly from 
+// to COM components. If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
@@ -24,10 +24,10 @@ using System.Runtime.InteropServices;
 
 // Version information for an assembly consists of the following four values:
 //
-//      Major Version
-//      Minor Version 
-//      Build Number
-//      Revision
+// Major Version
+// Minor Version 
+// Build Number
+// Revision
 //
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
@@ -44,7 +44,8 @@ using System.Runtime.InteropServices;
 //[assembly: AssemblyVersion("0.1.0.2")]
 //[assembly: AssemblyVersion("0.1.0.0")]
 //[assembly: AssemblyFileVersion("0.9.0.0")]
-//[assembly: AssemblyVersion("0.9.1.0")]   // bug fix for KR1, KR2
-//[assembly: AssemblyVersion("0.9.1.1")]   // bug fix for PS2 'EXTRA' file
+//[assembly: AssemblyVersion("0.9.1.0")] // bug fix for KR1, KR2
+//[assembly: AssemblyVersion("0.9.1.1")] // bug fix for PS2 'EXTRA' file
 //[assembly: AssemblyVersion("0.9.1.2")]   // PCSX2 Batch file generation
-[assembly: AssemblyVersion("0.9.1.3")]   //TeamControl; LookupAndVerify feature; FaceForm [List unknowns];  
+//[assembly: AssemblyVersion("0.9.1.3")]   //TeamControl; LookupAndVerify feature; FaceForm [List unknowns]; 
+[assembly: AssemblyVersion("0.9.2.0")] // Development Archetype editing; Contract editing; Shared-name highlighting; Team Data editing (Nickname/Abbrev/Stadium/City/AbbrAlt/Logo/Playbook/DefaultJersey/DefScheme)
