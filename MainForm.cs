@@ -27,7 +27,7 @@ autoCorrectScheduleToolStripMenuItem.Checked = SchedulerHelper.AUTO_CORRECT_SCHE
 nameColorToolStripMenuItem.BackColor = Color.White;
 nameColorToolStripMenuItem.ForeColor = Color.Blue;
 this.Text = "NFL2K5Tool " + System.Reflection.Assembly.GetCallingAssembly().GetName().Version
-+" beta";
++" modified by QQ";
 
 mTextBox.AllowDrop = true;
 mTextBox.DragOver += new DragEventHandler(file_DragOver);
