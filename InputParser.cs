@@ -68,6 +68,25 @@ retVal.Add(m.Groups[1].Value);
 return retVal;
 }
 
+public static List<string> GetTeamDataRows(string data)
+{
+Regex r = new Regex("(TeamData,.*)", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+MatchCollection mc = r.Matches(data);
+List<string> retVal = null;
+if (mc.Count > 0)
+{
+retVal = new List<string>();
+foreach (Match m in mc)
+retVal.Add(m.Groups[1].Value);
+}
+return retVal;
+}
+
+public static List<string> ParseTeamDataLine(string line)
+{
+return ParseCoachLine(line);
+}
+
 /// <summary>
 /// returns the line that linePosition falls on in data
 /// </summary>
@@ -232,6 +251,10 @@ else if (line.StartsWith("CoachKEY=", StringComparison.InvariantCultureIgnoreCas
 {
 Tool.CoachKey = line.Substring(9);
 }
+else if (line.StartsWith("TeamDataKEY=", StringComparison.InvariantCultureIgnoreCase))
+{
+Tool.TeamDataKey = line.Substring(12);
+}
 else if (line.StartsWith("SET"))
 {
 ApplySet(line);
@@ -289,6 +312,10 @@ Tool.AutoUpdatePhoto();
 else if (line.StartsWith("Coach,", StringComparison.InvariantCultureIgnoreCase))
 {
 SetCoachData(line);
+}
+else if (line.StartsWith("TeamData,", StringComparison.InvariantCultureIgnoreCase))
+{
+SetTeamData(line);
 }
 else if (line.StartsWith("LookupPlayer"))
 {
@@ -567,6 +594,43 @@ break;
 catch (Exception)
 {
 StaticUtils.AddError(string.Format("Error setting data for line:\r\n{0}\r\n\r\nPerhaps check '{1}' attribute.", line, current.ToString()));
+}
+}
+
+private void SetTeamData(string line)
+{
+string[] keyParts = Tool.TeamDataKey.Split(",".ToCharArray());
+string[] parts = line.Split(",".ToCharArray());
+if (parts.Length < 2)
+return;
+
+int teamIndex = Tool.GetTeamIndex(parts[1]);
+if (teamIndex < 0)
+{
+StaticUtils.AddError(String.Format("TeamData: unknown team '{0}' in line: {1}", parts[1], line));
+return;
+}
+
+TeamDataOffsets current = TeamDataOffsets.Nickname;
+try
+{
+for (int i = 2; i < keyParts.Length; i++)
+{
+if (i >= parts.Length) break; // stop processing if we're out of parts, same as SetCoachData
+string lp = keyParts[i].ToLower();
+if (lp == "teamdata" || lp == "team") continue; // header/team columns handled above, skip if repeated
+
+current = (TeamDataOffsets)Enum.Parse(typeof(TeamDataOffsets), keyParts[i], true);
+// Strip brackets for Stadium, matching the coach Body convention
+// (SetCoachAttribute's Body case also strips brackets before lookup).
+string val = parts[i].Replace("[", "").Replace("]", "");
+Tool.SetTeamString(teamIndex, current, val);
+}
+}
+catch (Exception)
+{
+StaticUtils.AddError(String.Format(
+"Error setting data for line:'{0}' check '{1}' attribute.", line, current.ToString()));
 }
 }
 
