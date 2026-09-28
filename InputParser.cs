@@ -612,6 +612,7 @@ return;
 }
 
 TeamDataOffsets current = TeamDataOffsets.Nickname;
+string currentPartName = "";
 try
 {
 for (int i = 2; i < keyParts.Length; i++)
@@ -619,6 +620,21 @@ for (int i = 2; i < keyParts.Length; i++)
 if (i >= parts.Length) break; // stop processing if we're out of parts, same as SetCoachData
 string lp = keyParts[i].ToLower();
 if (lp == "teamdata" || lp == "team") continue; // header/team columns handled above, skip if repeated
+currentPartName = keyParts[i];
+
+if (lp == "defscheme")
+{
+// DefScheme is its own enum (DefensiveScheme), not a TeamDataOffsets member --
+// dispatched separately via SetDefScheme, using the same raw-int text format
+// (0=Scheme43, 1=Scheme34, 2=SchemeDual) TeamDataEditForm's GUI already
+// round-trips through GetControlValue/SetControlValue.
+int schemeVal;
+if (Int32.TryParse(parts[i], out schemeVal))
+Tool.SetDefScheme(parts[1], (DefensiveScheme)schemeVal);
+else
+StaticUtils.AddError(String.Format("TeamData: invalid DefScheme value '{0}' in line: {1}", parts[i], line));
+continue;
+}
 
 current = (TeamDataOffsets)Enum.Parse(typeof(TeamDataOffsets), keyParts[i], true);
 // Strip brackets for Stadium, matching the coach Body convention
@@ -630,7 +646,7 @@ Tool.SetTeamString(teamIndex, current, val);
 catch (Exception)
 {
 StaticUtils.AddError(String.Format(
-"Error setting data for line:'{0}' check '{1}' attribute.", line, current.ToString()));
+"Error setting data for line:'{0}' check '{1}' attribute.", line, currentPartName));
 }
 }
 

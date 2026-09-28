@@ -818,10 +818,10 @@ namespace NFL2K5Tool
 
         // ─── Text export / TeamDataKey (mirrors CoachKey/GetCoachData exactly) ─────────────
 
-        public const string DefaultTeamDataKey = "TeamData,Team,Nickname,Abbrev,Stadium,City,AbbrAlt";
+        public const string DefaultTeamDataKey = "TeamData,Team,Nickname,Abbrev,Stadium,City,AbbrAlt,Logo,Playbook,DefaultJersey,DefScheme";
 
         private string mTeamDataKeyAll =
-            "TeamData,Team,Nickname,Abbrev,Stadium,City,AbbrAlt,Logo,Playbook,DefaultJersey";
+            "TeamData,Team,Nickname,Abbrev,Stadium,City,AbbrAlt,Logo,Playbook,DefaultJersey,DefScheme";
 
         public string TeamDataKeyAll { get { return mTeamDataKeyAll; } }
 
@@ -843,7 +843,11 @@ namespace NFL2K5Tool
                             && !part.Equals("TeamData", StringComparison.InvariantCultureIgnoreCase))
                         {
                             lastAttr = part;
-                            Enum.Parse(typeof(TeamDataOffsets), part, true); // throws on invalid part
+                            // DefScheme is a separate enum (DefensiveScheme), not a TeamDataOffsets
+                            // member -- validated by existence alone; GetTeamData/SetTeamData dispatch
+                            // it directly via GetDefScheme/SetDefScheme, bypassing TeamDataOffsets entirely.
+                            if (!part.Equals("DefScheme", StringComparison.InvariantCultureIgnoreCase))
+                                Enum.Parse(typeof(TeamDataOffsets), part, true); // throws on invalid part
                         }
                     }
                     mTeamDataKey = value;
@@ -870,6 +874,16 @@ namespace NFL2K5Tool
             {
                 if ("TeamData,Team".IndexOf(part, StringComparison.InvariantCultureIgnoreCase) == -1)
                 {
+                    if (part.Equals("DefScheme", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        // DefScheme is a separate enum (DefensiveScheme), not a TeamDataOffsets
+                        // member -- dispatched directly via GetDefScheme, bypassing GetTeamString.
+                        // Exported as a raw int (0=Scheme43, 1=Scheme34, 2=SchemeDual), matching
+                        // TeamDataEditForm's GetControlValue/SetControlValue round-trip format.
+                        sb.Append((int)GetDefScheme(sTeamsDataOrder[teamIndex]));
+                        sb.Append(",");
+                        continue;
+                    }
                     TeamDataOffsets attr = (TeamDataOffsets)Enum.Parse(typeof(TeamDataOffsets), part, true);
                     string val = GetTeamString(teamIndex, attr);
                     if (attr == TeamDataOffsets.Stadium)
