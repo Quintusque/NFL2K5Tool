@@ -54,7 +54,7 @@ if (dlg.ShowDialog() == System.Windows.Forms.DialogResult.OK)
 LoadSaveFile(dlg.FileName);
 }
 dlg.Dispose();
-StaticUtils.ShowErrors(false);
+StaticUtils.ShowWarnings(false); StaticUtils.ShowErrors(false);
 }
 
 private void LoadSaveFile(string filename)
@@ -146,6 +146,11 @@ builder.Append(mTool.GetTeamPlayers("DraftClass", listAttributesToolStripMenuIte
 if (listCoachesToolStripMenuItem1.Checked)
 {
 builder.Append(mTool.GetCoachData());
+}
+
+if (listTeamDataToolStripMenuItem.Checked)
+{
+builder.Append(mTool.GetTeamDataAll());
 }
 
 if (playerControlledTeamsToolStripMenuItem.Checked && mTool.SaveType == SaveType.Franchise)
@@ -386,7 +391,7 @@ if (dlg.ShowDialog() == DialogResult.OK)
 {
 ApplyTextToSave();
 mTool.SaveFile(dlg.FileName);
-StaticUtils.ShowErrors(false);
+StaticUtils.ShowWarnings(false); StaticUtils.ShowErrors(false);
 }
 dlg.Dispose();
 }
@@ -402,7 +407,7 @@ InputParser parser = new InputParser(this.mTool);
 parser.ProcessText(mTextBox.Text);
 sw.Stop();
 statusBar1.Text = "Done Applying data." + (sw.ElapsedMilliseconds / 1000.0) + "s";
-StaticUtils.ShowErrors(false);
+StaticUtils.ShowWarnings(false); StaticUtils.ShowErrors(false);
 
 string lookupPlayers = parser.GetLookupPlayers();
 if (lookupPlayers != null)
@@ -760,6 +765,10 @@ if (!String.IsNullOrEmpty(line) && line.StartsWith("Coach", StringComparison.Inv
 {
 EditCoach();
 }
+else if (!String.IsNullOrEmpty(line) && line.StartsWith("TeamData", StringComparison.InvariantCultureIgnoreCase))
+{
+EditTeamData();
+}
 else if (!String.IsNullOrEmpty(line) && InputParser.ParsePlayerLine(line).Count > 2)
 {
 EditPlayer();
@@ -773,6 +782,21 @@ form.ReversePBPs = DataMap.ReversePBPMap;
 form.ReversePhotos = DataMap.ReversePhotoMap;
 form.PBPs = DataMap.PBPMap;
 form.Photos = DataMap.PhotoMap;
+form.Data = mTextBox.Text;
+form.SelectionStart = mTextBox.SelectionStart;
+if (form.ShowDialog(this) == DialogResult.OK)
+{
+SetText(form.Data);
+mTextBox.SelectionStart = form.SelectionStart;
+mTextBox.ScrollToCaret();
+}
+form.Dispose();
+}
+
+private void EditTeamData()
+{
+TeamDataEditForm form = new TeamDataEditForm();
+form.Tool = mTool;
 form.Data = mTextBox.Text;
 form.SelectionStart = mTextBox.SelectionStart;
 if (form.ShowDialog(this) == DialogResult.OK)
@@ -856,6 +880,11 @@ EditPlayer();
 private void listCoachesToolStripMenuItem_Click(object sender, EventArgs e)
 {
 listCoachesToolStripMenuItem1.Checked = !listCoachesToolStripMenuItem1.Checked;
+}
+
+private void listTeamDataToolStripMenuItemClick(object sender, EventArgs e)
+{
+listTeamDataToolStripMenuItem.Checked = !listTeamDataToolStripMenuItem.Checked;
 }
 
 private void fullCoachAttributesToolStripMenuItem_Click(object sender, EventArgs e)

@@ -56,6 +56,7 @@ namespace NFL2K5Tool
             this.listFreeAgentsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listDraftClassToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.coachOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.listTeamDataToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.listCoachesToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.fullCoachAttributesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.playerControlledTeamsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -267,6 +268,7 @@ namespace NFL2K5Tool
             this.listFreeAgentsToolStripMenuItem,
             this.listDraftClassToolStripMenuItem,
             this.coachOptionsToolStripMenuItem,
+            this.listTeamDataToolStripMenuItem,
             this.playerControlledTeamsToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
@@ -364,6 +366,13 @@ namespace NFL2K5Tool
             this.listCoachesToolStripMenuItem1.Size = new System.Drawing.Size(185, 22);
             this.listCoachesToolStripMenuItem1.Text = "List Coaches";
             this.listCoachesToolStripMenuItem1.Click += new System.EventHandler(this.listCoachesToolStripMenuItem_Click);
+            //
+            // listTeamDataToolStripMenuItem
+            //
+            this.listTeamDataToolStripMenuItem.Name = "listTeamDataToolStripMenuItem";
+            this.listTeamDataToolStripMenuItem.Size = new System.Drawing.Size(201, 22);
+            this.listTeamDataToolStripMenuItem.Text = "List Team Data";
+            this.listTeamDataToolStripMenuItem.Click += new System.EventHandler(this.listTeamDataToolStripMenuItemClick);
             //
             // fullCoachAttributesToolStripMenuItem
             //
@@ -762,6 +771,7 @@ namespace NFL2K5Tool
         private System.Windows.Forms.ToolStripMenuItem listSpecialTeamsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem playerEditorToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem coachOptionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem listTeamDataToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem listCoachesToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem fullCoachAttributesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem globalEditorToolStripMenuItem;
